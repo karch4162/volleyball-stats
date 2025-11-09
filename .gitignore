@@ -1,0 +1,39 @@
+# Flutter / Dart
+app/.dart_tool/
+app/.packages
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/.metadata
+app/build/
+app/coverage/
+app/android/.gradle/
+app/android/app/build/
+app/ios/Pods/
+app/ios/.symlinks/
+app/ios/Flutter/Flutter.podspec
+
+# Node / TypeScript
+server/node_modules/
+server/dist/
+server/coverage/
+server/.nyc_output/
+server/.turbo/
+server/tmp/
+server/.env
+server/.env.*
+
+# Supabase CLI artifacts
+supabase/.env
+supabase/.branches
+supabase/.temp
+supabase/.cache
+supabase/.supabase
+
+# General
+.env
+.env.*
+*.log
+.DS_Store
+.idea/
+.vscode/
+Thumbs.db
