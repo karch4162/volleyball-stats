@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/match_setup/match_setup_flow.dart';
 
 void main() {
-  runApp(const VolleyballStatsApp());
+  runApp(const ProviderScope(child: VolleyballStatsApp()));
 }
 
 class VolleyballStatsApp extends StatelessWidget {

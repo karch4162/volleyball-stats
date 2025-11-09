@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'providers.dart';
 import 'models/match_draft.dart';
 import 'models/match_player.dart';
 import 'widgets/match_metadata_step.dart';
@@ -7,14 +9,14 @@ import 'widgets/roster_selection_step.dart';
 import 'widgets/rotation_setup_step.dart';
 import 'widgets/summary_step.dart';
 
-class MatchSetupFlow extends StatefulWidget {
+class MatchSetupFlow extends ConsumerStatefulWidget {
   const MatchSetupFlow({super.key});
 
   @override
-  State<MatchSetupFlow> createState() => _MatchSetupFlowState();
+  ConsumerState<MatchSetupFlow> createState() => _MatchSetupFlowState();
 }
 
-class _MatchSetupFlowState extends State<MatchSetupFlow> {
+class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
   final _opponentController = TextEditingController();
   final _locationController = TextEditingController();
   final _seasonLabelController = TextEditingController(text: DateTime.now().year.toString());
@@ -27,51 +29,6 @@ class _MatchSetupFlowState extends State<MatchSetupFlow> {
     for (var rotation = 1; rotation <= 6; rotation++) rotation: null,
   };
 
-  final List<MatchPlayer> _demoRoster = const [
-    MatchPlayer(
-      id: 'player-avery',
-      name: 'Avery Harper',
-      jerseyNumber: 2,
-      position: 'Setter',
-    ),
-    MatchPlayer(
-      id: 'player-bailey',
-      name: 'Bailey Jordan',
-      jerseyNumber: 5,
-      position: 'Opposite',
-    ),
-    MatchPlayer(
-      id: 'player-casey',
-      name: 'Casey Lane',
-      jerseyNumber: 11,
-      position: 'Outside Hitter',
-    ),
-    MatchPlayer(
-      id: 'player-devon',
-      name: 'Devon Cruz',
-      jerseyNumber: 9,
-      position: 'Middle Blocker',
-    ),
-    MatchPlayer(
-      id: 'player-elliot',
-      name: 'Elliot Kim',
-      jerseyNumber: 4,
-      position: 'Libero',
-    ),
-    MatchPlayer(
-      id: 'player-finley',
-      name: 'Finley Brooks',
-      jerseyNumber: 7,
-      position: 'Middle Blocker',
-    ),
-    MatchPlayer(
-      id: 'player-greer',
-      name: 'Greer Miles',
-      jerseyNumber: 10,
-      position: 'Outside Hitter',
-    ),
-  ];
-
   @override
   void dispose() {
     _opponentController.dispose();
@@ -82,42 +39,56 @@ class _MatchSetupFlowState extends State<MatchSetupFlow> {
 
   @override
   Widget build(BuildContext context) {
+    final rosterAsync = ref.watch(matchSetupRosterProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Match Setup'),
       ),
-      body: Stepper(
-        type: StepperType.horizontal,
-        currentStep: _currentStep,
-        onStepContinue: _handleContinue,
-        onStepCancel: _handleBack,
-        controlsBuilder: (context, details) {
-          final isLastStep = _currentStep == _steps.length - 1;
-          return Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: Row(
-              children: [
-                FilledButton(
-                  onPressed: details.onStepContinue,
-                  child: Text(isLastStep ? 'Finish' : 'Continue'),
+      body: rosterAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) => _ErrorView(
+          message: 'Unable to load roster',
+          onRetry: () => ref.refresh(matchSetupRosterProvider),
+        ),
+        data: (roster) {
+          _pruneSelections(roster);
+          final steps = _buildSteps(roster);
+
+          return Stepper(
+            type: StepperType.horizontal,
+            currentStep: _currentStep,
+            onStepContinue: _handleContinue,
+            onStepCancel: _handleBack,
+            controlsBuilder: (context, details) {
+              final isLastStep = _currentStep == steps.length - 1;
+              return Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Row(
+                  children: [
+                    FilledButton(
+                      onPressed: details.onStepContinue,
+                      child: Text(isLastStep ? 'Finish' : 'Continue'),
+                    ),
+                    const SizedBox(width: 12),
+                    if (_currentStep > 0)
+                      TextButton(
+                        onPressed: details.onStepCancel,
+                        child: const Text('Back'),
+                      ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                if (_currentStep > 0)
-                  TextButton(
-                    onPressed: details.onStepCancel,
-                    child: const Text('Back'),
-                  ),
-              ],
-            ),
+              );
+            },
+            steps: steps,
           );
         },
-        steps: _steps,
       ),
     );
   }
 
-  List<Step> get _steps {
-    final selectedPlayers = _demoRoster
+  List<Step> _buildSteps(List<MatchPlayer> roster) {
+    final selectedPlayers = roster
         .where((player) => _selectedPlayerIds.contains(player.id))
         .toList(growable: false);
 
@@ -139,7 +110,7 @@ class _MatchSetupFlowState extends State<MatchSetupFlow> {
         isActive: _currentStep >= 1,
         state: _currentStep > 1 ? StepState.complete : StepState.indexed,
         content: RosterSelectionStep(
-          roster: _demoRoster,
+          roster: roster,
           selectedPlayerIds: _selectedPlayerIds,
           onTogglePlayer: _togglePlayerSelection,
         ),
@@ -296,6 +267,64 @@ class _MatchSetupFlowState extends State<MatchSetupFlow> {
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
+    );
+  }
+
+  void _pruneSelections(List<MatchPlayer> roster) {
+    final rosterIds = roster.map((player) => player.id).toSet();
+    final sanitizedSelection = _selectedPlayerIds.where(rosterIds.contains).toSet();
+
+    bool changed = sanitizedSelection.length != _selectedPlayerIds.length;
+
+    final sanitizedRotation = <int, String?>{};
+    for (final entry in _rotationAssignments.entries) {
+      final playerId = entry.value;
+      if (playerId != null && !rosterIds.contains(playerId)) {
+        sanitizedRotation[entry.key] = null;
+        changed = true;
+      } else {
+        sanitizedRotation[entry.key] = playerId;
+      }
+    }
+
+    if (changed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _selectedPlayerIds
+            ..clear()
+            ..addAll(sanitizedSelection);
+          _rotationAssignments
+            ..clear()
+            ..addAll(sanitizedRotation);
+        });
+      });
+    }
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  const _ErrorView({
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(message),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: onRetry,
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
     );
   }
 }
