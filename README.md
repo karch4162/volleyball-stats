@@ -19,3 +19,5 @@ Refer to `AGENTS.md`, `agent-docs/VOLLEYBALL-STATS-PLAN.md`, and `agent-docs/DEV
 - Flutter client expects Supabase credentials at runtime. Provide them via Dart defines:  
   `flutter run -d chrome --dart-define=SUPABASE_URL=<url> --dart-define=SUPABASE_ANON_KEY=<anon_key>`  
   When defines are omitted, the app falls back to an in-memory repository (useful for widget tests).
+- Match drafts persist locally via Hive (`app/lib/features/match_setup/data/match_draft_cache.dart`). First app launch initializes Hive; cached drafts survive restarts and sync to Supabase when available.
+- Supabase integration tests (`app/test/integration/match_setup_repository_test.dart`) require `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` environment variables; otherwise they are skipped.

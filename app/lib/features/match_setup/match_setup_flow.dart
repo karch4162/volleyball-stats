@@ -6,6 +6,7 @@ import '../../core/providers/supabase_client_provider.dart';
 import 'providers.dart';
 import 'models/match_draft.dart';
 import 'models/match_player.dart';
+import '../rally_capture/rally_capture_screen.dart';
 import 'widgets/match_metadata_step.dart';
 import 'widgets/roster_selection_step.dart';
 import 'widgets/rotation_setup_step.dart';
@@ -288,14 +289,11 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
         draft: _draft,
       );
       if (!mounted) return;
-      final draft = _draft;
-      final message = [
-        'Match vs ${draft.opponent}',
-        if (draft.matchDate != null)
-          MaterialLocalizations.of(context).formatFullDate(draft.matchDate!),
-        '${draft.selectedPlayerIds.length} players, rotation ready',
-      ].join(' • ');
-      _showSnackBar('Match draft saved: $message');
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => RallyCaptureScreen(matchId: _matchId),
+        ),
+      );
     } catch (error, stackTrace) {
       debugPrint('Failed to save match draft: $error\n$stackTrace');
       if (!mounted) return;
