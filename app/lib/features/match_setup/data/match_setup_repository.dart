@@ -7,6 +7,7 @@ abstract class MatchSetupRepository {
   Future<MatchDraft?> loadDraft({required String matchId});
 
   Future<void> saveDraft({
+    required String teamId,
     required String matchId,
     required MatchDraft draft,
   });

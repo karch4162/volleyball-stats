@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
+import '../../core/providers/supabase_client_provider.dart';
 import 'providers.dart';
 import 'models/match_draft.dart';
 import 'models/match_player.dart';
@@ -10,7 +12,9 @@ import 'widgets/rotation_setup_step.dart';
 import 'widgets/summary_step.dart';
 
 class MatchSetupFlow extends ConsumerStatefulWidget {
-  const MatchSetupFlow({super.key});
+  const MatchSetupFlow({super.key, this.matchId});
+
+  final String? matchId;
 
   @override
   ConsumerState<MatchSetupFlow> createState() => _MatchSetupFlowState();
@@ -28,6 +32,18 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
   final Map<int, String?> _rotationAssignments = {
     for (var rotation = 1; rotation <= 6; rotation++) rotation: null,
   };
+  late final String _matchId;
+  bool _isSaving = false;
+  late final bool _isSupabaseEnabled;
+
+  @override
+  void initState() {
+    super.initState();
+    _isSupabaseEnabled = ref.read(supabaseClientProvider) != null;
+    _matchId = widget.matchId ??
+        (_isSupabaseEnabled ? defaultMatchDraftId : const Uuid().v4());
+    Future.microtask(_loadDraft);
+  }
 
   @override
   void dispose() {
@@ -58,7 +74,7 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
           return Stepper(
             type: StepperType.horizontal,
             currentStep: _currentStep,
-            onStepContinue: _handleContinue,
+            onStepContinue: _isSaving ? null : () => _handleContinue(),
             onStepCancel: _handleBack,
             controlsBuilder: (context, details) {
               final isLastStep = _currentStep == steps.length - 1;
@@ -67,8 +83,14 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
                 child: Row(
                   children: [
                     FilledButton(
-                      onPressed: details.onStepContinue,
-                      child: Text(isLastStep ? 'Finish' : 'Continue'),
+                      onPressed: _isSaving ? null : details.onStepContinue,
+                      child: Text(
+                        _isSaving
+                            ? 'Saving...'
+                            : isLastStep
+                                ? 'Finish'
+                                : 'Continue',
+                      ),
                     ),
                     const SizedBox(width: 12),
                     if (_currentStep > 0)
@@ -182,7 +204,7 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
     });
   }
 
-  void _handleContinue() {
+  Future<void> _handleContinue() async {
     switch (_currentStep) {
       case 0:
         if (_validateMatchMetadata()) {
@@ -218,7 +240,7 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
         }
         break;
       case 3:
-        _handleSubmit();
+        await _handleSubmit();
         break;
     }
   }
@@ -252,22 +274,67 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
     return true;
   }
 
-  void _handleSubmit() {
-    final draft = _draft;
-    final message = [
-      'Match vs ${draft.opponent}',
-      if (draft.matchDate != null)
-        MaterialLocalizations.of(context).formatFullDate(draft.matchDate!),
-      '${draft.selectedPlayerIds.length} players, rotation ready',
-    ].join(' • ');
+  Future<void> _handleSubmit() async {
+    final repository = ref.read(matchSetupRepositoryProvider);
+    setState(() {
+      _isSaving = true;
+    });
 
-    _showSnackBar('Match draft saved: $message');
+    try {
+      await repository.saveDraft(
+        teamId: defaultTeamId,
+        matchId: _matchId,
+        draft: _draft,
+      );
+      if (!mounted) return;
+      final draft = _draft;
+      final message = [
+        'Match vs ${draft.opponent}',
+        if (draft.matchDate != null)
+          MaterialLocalizations.of(context).formatFullDate(draft.matchDate!),
+        '${draft.selectedPlayerIds.length} players, rotation ready',
+      ].join(' • ');
+      _showSnackBar('Match draft saved: $message');
+    } catch (error, stackTrace) {
+      debugPrint('Failed to save match draft: $error\n$stackTrace');
+      if (!mounted) return;
+      _showSnackBar('Failed to save match draft. Please retry.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
   }
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  Future<void> _loadDraft() async {
+    final repository = ref.read(matchSetupRepositoryProvider);
+    final draft = await repository.loadDraft(matchId: _matchId);
+    if (draft == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _draft = draft;
+      _opponentController.text = draft.opponent;
+      _locationController.text = draft.location;
+      _seasonLabelController.text = draft.seasonLabel;
+      _matchDate = draft.matchDate;
+      _selectedPlayerIds
+        ..clear()
+        ..addAll(draft.selectedPlayerIds);
+
+      for (var rotation = 1; rotation <= 6; rotation++) {
+        _rotationAssignments[rotation] = draft.startingRotation[rotation];
+      }
+    });
   }
 
   void _pruneSelections(List<MatchPlayer> roster) {

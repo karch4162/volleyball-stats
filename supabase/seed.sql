@@ -46,6 +46,42 @@ values
     'OH',
     'OH',
     true
+  ),
+  (
+    '24111111-1111-1111-1111-111111111111',
+    (select id from upserted_team),
+    9,
+    'Devon',
+    'Cruz',
+    'MB',
+    true
+  ),
+  (
+    '25111111-1111-1111-1111-111111111111',
+    (select id from upserted_team),
+    4,
+    'Elliot',
+    'Kim',
+    'L',
+    true
+  ),
+  (
+    '26111111-1111-1111-1111-111111111111',
+    (select id from upserted_team),
+    7,
+    'Finley',
+    'Brooks',
+    'MB',
+    true
+  ),
+  (
+    '27111111-1111-1111-1111-111111111111',
+    (select id from upserted_team),
+    10,
+    'Greer',
+    'Miles',
+    'OH',
+    true
   )
 on conflict (id) do update
   set team_id = excluded.team_id,
@@ -225,6 +261,40 @@ values
   )
 on conflict (id) do update
   set stats = excluded.stats,
+      updated_at = now();
+
+insert into match_drafts (team_id, match_id, opponent, match_date, location, season_label, selected_player_ids, starting_rotation)
+values (
+  '11111111-1111-1111-1111-111111111111',
+  '31111111-1111-1111-1111-111111111111',
+  'Ridgeview Hawks',
+  current_date - interval '3 day',
+  'Home',
+  '2025',
+  array[
+    '21111111-1111-1111-1111-111111111111',
+    '22111111-1111-1111-1111-111111111111',
+    '23111111-1111-1111-1111-111111111111',
+    '24111111-1111-1111-1111-111111111111',
+    '25111111-1111-1111-1111-111111111111',
+    '26111111-1111-1111-1111-111111111111'
+  ],
+  '{
+    "1": "21111111-1111-1111-1111-111111111111",
+    "2": "22111111-1111-1111-1111-111111111111",
+    "3": "23111111-1111-1111-1111-111111111111",
+    "4": "24111111-1111-1111-1111-111111111111",
+    "5": "25111111-1111-1111-1111-111111111111",
+    "6": "26111111-1111-1111-1111-111111111111"
+  }'::jsonb
+)
+on conflict (team_id, match_id) do update
+  set opponent = excluded.opponent,
+      match_date = excluded.match_date,
+      location = excluded.location,
+      season_label = excluded.season_label,
+      selected_player_ids = excluded.selected_player_ids,
+      starting_rotation = excluded.starting_rotation,
       updated_at = now();
 
 commit;

@@ -72,7 +72,11 @@ class InMemoryMatchSetupRepository implements MatchSetupRepository {
   }
 
   @override
-  Future<void> saveDraft({required String matchId, required MatchDraft draft}) async {
+  Future<void> saveDraft({
+    required String teamId,
+    required String matchId,
+    required MatchDraft draft,
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 80));
     _drafts[matchId] = draft;
   }

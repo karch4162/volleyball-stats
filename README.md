@@ -16,3 +16,6 @@ Refer to `AGENTS.md`, `agent-docs/VOLLEYBALL-STATS-PLAN.md`, and `agent-docs/DEV
 - Phase 0 work began inside WSL for this Codex CLI session, but the existing Flutter SDK installed on Windows (`C:\Flutter`) uses CRLF scripts that fail under WSL.
 - Until a Linux-native Flutter SDK is installed, run Flutter commands from Windows (e.g., via Cursor IDE or PowerShell) so `flutter pub get`, `flutter analyze`, and `flutter test` succeed.
 - Node.js and Supabase tooling remain cross-platform; ensure `.env` files stay out of version control.
+- Flutter client expects Supabase credentials at runtime. Provide them via Dart defines:  
+  `flutter run -d chrome --dart-define=SUPABASE_URL=<url> --dart-define=SUPABASE_ANON_KEY=<anon_key>`  
+  When defines are omitted, the app falls back to an in-memory repository (useful for widget tests).
