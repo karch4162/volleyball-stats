@@ -3,9 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/supabase_client_provider.dart';
 import 'data/data.dart';
 import 'models/match_player.dart';
-
-const String defaultTeamId = '11111111-1111-1111-1111-111111111111';
-const String defaultMatchDraftId = '31111111-1111-1111-1111-111111111111';
+import 'constants.dart';
 
 final matchDraftCacheProvider = Provider<MatchDraftCache>((ref) {
   return InMemoryMatchDraftCache();
