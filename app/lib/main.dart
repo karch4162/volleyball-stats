@@ -28,7 +28,15 @@ class VolleyballStatsApp extends StatelessWidget {
     return MaterialApp(
       title: 'Volleyball Stats',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        scaffoldBackgroundColor: Colors.white,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+        ),
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(color: Colors.black),
+        ),
         useMaterial3: true,
       ),
       home: const MatchSetupFlow(),

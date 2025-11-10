@@ -19,11 +19,18 @@ jobs:
         run: |
           cd app
           flutter pub get
-      - name: Flutter analyze & test
+      - name: Flutter analyze
         run: |
           cd app
           flutter analyze
-          flutter test
+      - name: Flutter tests
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          cd app
+          flutter test --dart-define=SUPABASE_URL=$SUPABASE_URL --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
