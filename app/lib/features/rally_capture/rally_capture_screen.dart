@@ -26,7 +26,7 @@ class RallyCaptureScreen extends ConsumerWidget {
           error: error,
           onRetry: () => ref.refresh(rallyCaptureStateProvider(matchId)),
         ),
-        data: (state) => _RallyCaptureBody(matchId: matchId, roster: state.roster),
+        data: (state) => _RallyCaptureBody(state: state),
       ),
     );
   }
@@ -34,48 +34,130 @@ class RallyCaptureScreen extends ConsumerWidget {
 
 class _RallyCaptureBody extends StatelessWidget {
   const _RallyCaptureBody({
-    required this.matchId,
-    required this.roster,
+    required this.state,
   });
 
-  final String matchId;
-  final List<MatchPlayer> roster;
+  final RallyCaptureState state;
 
   @override
   Widget build(BuildContext context) {
+    final matchInfo = [
+      if (state.draft.opponent.isNotEmpty) 'vs ${state.draft.opponent}',
+      if (state.draft.matchDate != null)
+        MaterialLocalizations.of(context).formatMediumDate(state.draft.matchDate!),
+      if (state.draft.location.isNotEmpty) state.draft.location,
+    ].join(' • ');
+
+    final rotationEntries = List.generate(6, (index) {
+      final position = index + 1;
+      final player = state.rotation[position];
+      return _RotationEntry(position: position, player: player);
+    });
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isWide = constraints.maxWidth > 600;
-        return Padding(
+        final isWide = constraints.maxWidth > 900;
+        final content = isWide
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _SectionCard(
+                          title: 'Rotation Tracker',
+                          child: _RotationGrid(entries: rotationEntries),
+                        ),
+                        const SizedBox(height: 16),
+                        _SectionCard(
+                          title: 'Active Roster',
+                          child: _RosterList(players: state.activePlayers),
+                        ),
+                        const SizedBox(height: 16),
+                        _SectionCard(
+                          title: 'Bench',
+                          child: state.benchPlayers.isEmpty
+                              ? const Text('No bench players assigned.')
+                              : _RosterList(players: state.benchPlayers),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _SectionCard(
+                          title: 'Rally Timeline',
+                          child: _RallyTimeline(),
+                        ),
+                        const SizedBox(height: 16),
+                        _SectionCard(
+                          title: 'Actions',
+                          child: _ActionPanel(),
+                        ),
+                        const SizedBox(height: 16),
+                        _SectionCard(
+                          title: 'Rally Controls',
+                          child: _RallyControls(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SectionCard(
+                    title: 'Rotation Tracker',
+                    child: _RotationGrid(entries: rotationEntries),
+                  ),
+                  const SizedBox(height: 16),
+                  _SectionCard(
+                    title: 'Active Roster',
+                    child: _RosterList(players: state.activePlayers),
+                  ),
+                  const SizedBox(height: 16),
+                  _SectionCard(
+                    title: 'Bench',
+                    child: state.benchPlayers.isEmpty
+                        ? const Text('No bench players assigned.')
+                        : _RosterList(players: state.benchPlayers),
+                  ),
+                  const SizedBox(height: 16),
+                  _SectionCard(
+                    title: 'Rally Timeline',
+                    child: _RallyTimeline(),
+                  ),
+                  const SizedBox(height: 16),
+                  _SectionCard(
+                    title: 'Actions',
+                    child: _ActionPanel(),
+                  ),
+                  const SizedBox(height: 16),
+                  _SectionCard(
+                    title: 'Rally Controls',
+                    child: _RallyControls(),
+                  ),
+                ],
+              );
+
+        return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Match: $matchId',
+                matchInfo.isEmpty ? 'Rally Capture' : matchInfo,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 16),
-              if (isWide)
-                Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(child: _RosterPanel(roster: roster)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _ActionPanel()),
-                    ],
-                  ),
-                )
-              else
-                Expanded(
-                  child: ListView(
-                    children: [
-                      _RosterPanel(roster: roster),
-                      const SizedBox(height: 16),
-                      _ActionPanel(),
-                    ],
-                  ),
-                ),
+              content,
             ],
           ),
         );
@@ -84,10 +166,14 @@ class _RallyCaptureBody extends StatelessWidget {
   }
 }
 
-class _RosterPanel extends StatelessWidget {
-  const _RosterPanel({required this.roster});
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.title,
+    required this.child,
+  });
 
-  final List<MatchPlayer> roster;
+  final String title;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -97,21 +183,9 @@ class _RosterPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Roster',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text(title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            if (roster.isEmpty)
-              const Text('No players selected for this match.')
-            else
-              ...roster.map(
-                (player) => ListTile(
-                  dense: true,
-                  title: Text('#${player.jerseyNumber} ${player.name}'),
-                  subtitle: Text(player.position),
-                ),
-              ),
+            child,
           ],
         ),
       ),
@@ -119,26 +193,165 @@ class _RosterPanel extends StatelessWidget {
   }
 }
 
+class _RotationGrid extends StatelessWidget {
+  const _RotationGrid({required this.entries});
+
+  final List<_RotationEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: entries
+          .map(
+            (entry) => SizedBox(
+              width: 120,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Pos ${entry.position}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.orange.withOpacity(0.1),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Text(
+                      entry.player != null
+                          ? '#${entry.player!.jerseyNumber} ${entry.player!.name}'
+                          : 'Unassigned',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class _RotationEntry {
+  _RotationEntry({required this.position, required this.player});
+
+  final int position;
+  final MatchPlayer? player;
+}
+
+class _RosterList extends StatelessWidget {
+  const _RosterList({required this.players});
+
+  final List<MatchPlayer> players;
+
+  @override
+  Widget build(BuildContext context) {
+    if (players.isEmpty) {
+      return const Text('No players assigned.');
+    }
+    return Column(
+      children: players
+          .map(
+            (player) => ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: Text('#${player.jerseyNumber} ${player.name}'),
+              subtitle: Text(player.position),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
 class _ActionPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Rally Controls (WIP)',
-              style: Theme.of(context).textTheme.titleMedium,
+    final actions = [
+      'Serve Ace',
+      'Serve Error',
+      'FBK',
+      'Attack Kill',
+      'Attack Error',
+      'Block',
+      'Dig',
+      'Assist',
+    ];
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: actions
+          .map(
+            (label) => FilledButton.tonal(
+              onPressed: () {},
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                child: Text(label),
+              ),
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'This area will contain rally timeline, quick stat buttons, and rotation tracking.',
+          )
+          .toList(),
+    );
+  }
+}
+
+class _RallyTimeline extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final placeholderItems = List.generate(
+      5,
+      (index) => 'Rally ${index + 1} • Result TBD',
+    );
+    return Column(
+      children: placeholderItems
+          .map(
+            (item) => ListTile(
+              leading: const Icon(Icons.sports_volleyball),
+              title: Text(item),
+              subtitle: const Text('Timeline entry placeholder'),
+              trailing: const Icon(Icons.chevron_right),
             ),
-          ],
+          )
+          .toList(),
+    );
+  }
+}
+
+class _RallyControls extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        FilledButton(
+          onPressed: () {},
+          child: const Text('Undo'),
         ),
-      ),
+        FilledButton(
+          onPressed: () {},
+          child: const Text('Redo'),
+        ),
+        FilledButton(
+          onPressed: () {},
+          child: const Text('Timeout'),
+        ),
+        FilledButton(
+          onPressed: () {},
+          child: const Text('Substitution'),
+        ),
+        FilledButton(
+          onPressed: () {},
+          child: const Text('Complete Rally'),
+        ),
+      ],
     );
   }
 }

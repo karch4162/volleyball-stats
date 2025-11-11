@@ -49,9 +49,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Rally Controls'), findsOneWidget);
-    expect(find.text('Roster'), findsOneWidget);
-    expect(find.textContaining('Player One'), findsOneWidget);
-    expect(find.textContaining(defaultMatchDraftId), findsOneWidget);
+    expect(find.text('Active Roster'), findsOneWidget);
+    expect(find.text('Rotation Tracker'), findsOneWidget);
+    expect(find.text('#1 Player One'), findsWidgets);
   });
 }
 

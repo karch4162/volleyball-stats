@@ -9,20 +9,48 @@ import '../match_setup/providers.dart';
 class RallyCaptureState {
   RallyCaptureState({
     required this.draft,
-    required this.roster,
+    required this.activePlayers,
+    required this.benchPlayers,
+    required this.rotation,
   });
 
   final MatchDraft draft;
-  final List<MatchPlayer> roster;
+  final List<MatchPlayer> activePlayers;
+  final List<MatchPlayer> benchPlayers;
+  final Map<int, MatchPlayer?> rotation;
 }
 
-final rallyCaptureStateProvider = FutureProvider.family<RallyCaptureState, String>((ref, matchId) async {
+MatchPlayer? _findPlayerById(List<MatchPlayer> roster, String id) {
+  try {
+    return roster.firstWhere((player) => player.id == id);
+  } catch (_) {
+    return null;
+  }
+}
+
+final rallyCaptureStateProvider =
+    FutureProvider.family<RallyCaptureState, String>((ref, matchId) async {
   final repository = ref.watch(matchSetupRepositoryProvider);
   final draft = await repository.loadDraft(matchId: matchId);
   if (draft == null) {
     throw StateError('No draft found for match $matchId');
   }
   final roster = await repository.fetchRoster(teamId: defaultTeamId);
-  return RallyCaptureState(draft: draft, roster: roster);
+  final active = roster
+      .where((player) => draft.selectedPlayerIds.contains(player.id))
+      .toList(growable: false);
+  final bench = roster
+      .where((player) => !draft.selectedPlayerIds.contains(player.id))
+      .toList(growable: false);
+  final rotation = <int, MatchPlayer?>{};
+  draft.startingRotation.forEach((pos, playerId) {
+    rotation[pos] = _findPlayerById(roster, playerId);
+  });
+  return RallyCaptureState(
+    draft: draft,
+    activePlayers: active,
+    benchPlayers: bench,
+    rotation: rotation,
+  );
 });
 
