@@ -27,3 +27,16 @@ SupabaseClient? getSupabaseClientOrNull() {
   return _supabaseClient;
 }
 
+/// Singleton access to the Supabase client
+class SupabaseSingleton {
+  SupabaseSingleton._(); // Private constructor
+  
+  static SupabaseSingleton? _instance;
+  
+  /// Get the singleton instance
+  static SupabaseSingleton get instance => _instance ??= SupabaseSingleton._();
+  
+  /// Get the client instance
+  SupabaseClient? get client => _supabaseClient;
+}
+
