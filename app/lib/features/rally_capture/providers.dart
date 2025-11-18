@@ -5,6 +5,7 @@ import '../match_setup/constants.dart';
 import '../match_setup/models/match_draft.dart';
 import '../match_setup/models/match_player.dart';
 import '../match_setup/providers.dart';
+import '../teams/team_providers.dart';
 import 'models/rally_models.dart';
 import 'data/rally_sync_repository.dart';
 
@@ -24,6 +25,71 @@ class RallyCaptureState {
   final int currentRotation; // Current rotation position (1-6)
 }
 
+/// Current lineup state that can be updated during the match (e.g., substitutions)
+class CurrentLineup {
+  CurrentLineup({
+    required this.activePlayers,
+    required this.benchPlayers,
+  });
+
+  final List<MatchPlayer> activePlayers;
+  final List<MatchPlayer> benchPlayers;
+
+  CurrentLineup copyWith({
+    List<MatchPlayer>? activePlayers,
+    List<MatchPlayer>? benchPlayers,
+  }) {
+    return CurrentLineup(
+      activePlayers: activePlayers ?? this.activePlayers,
+      benchPlayers: benchPlayers ?? this.benchPlayers,
+    );
+  }
+}
+
+/// Provider that manages the current lineup and can be updated during the match
+final currentLineupProvider = StateNotifierProvider.family<CurrentLineupNotifier, CurrentLineup, String>((ref, matchId) {
+  final stateAsync = ref.watch(rallyCaptureStateProvider(matchId));
+  
+  if (!stateAsync.hasValue) {
+    return CurrentLineupNotifier(CurrentLineup(activePlayers: const [], benchPlayers: const []));
+  }
+  
+  final state = stateAsync.value!;
+  return CurrentLineupNotifier(
+    CurrentLineup(
+      activePlayers: List<MatchPlayer>.from(state.activePlayers),
+      benchPlayers: List<MatchPlayer>.from(state.benchPlayers),
+    ),
+  );
+});
+
+class CurrentLineupNotifier extends StateNotifier<CurrentLineup> {
+  CurrentLineupNotifier(CurrentLineup initial) : super(initial);
+
+  /// Perform a substitution: swap outgoing player with incoming player
+  void substitute(MatchPlayer outgoing, MatchPlayer incoming) {
+    final newActive = List<MatchPlayer>.from(state.activePlayers);
+    final newBench = List<MatchPlayer>.from(state.benchPlayers);
+    
+    // Remove outgoing from active, add to bench
+    newActive.removeWhere((p) => p.id == outgoing.id);
+    if (!newBench.any((p) => p.id == outgoing.id)) {
+      newBench.add(outgoing);
+    }
+    
+    // Remove incoming from bench, add to active
+    newBench.removeWhere((p) => p.id == incoming.id);
+    if (!newActive.any((p) => p.id == incoming.id)) {
+      newActive.add(incoming);
+    }
+    
+    state = CurrentLineup(
+      activePlayers: newActive,
+      benchPlayers: newBench,
+    );
+  }
+}
+
 MatchPlayer? _findPlayerById(List<MatchPlayer> roster, String id) {
   try {
     return roster.firstWhere((player) => player.id == id);
@@ -39,17 +105,26 @@ final rallyCaptureStateProvider =
   if (draft == null) {
     throw StateError('No draft found for match $matchId');
   }
-  final roster = await repository.fetchRoster(teamId: defaultTeamId);
+  
+  // Use selected team ID, fallback to defaultTeamId for backwards compatibility
+  final selectedTeamId = ref.watch(selectedTeamIdProvider);
+  final effectiveTeamId = selectedTeamId ?? defaultTeamId;
+  
+  final roster = await repository.fetchRoster(teamId: effectiveTeamId);
+  
+  // Filter players based on draft selection
   final active = roster
       .where((player) => draft.selectedPlayerIds.contains(player.id))
       .toList(growable: false);
   final bench = roster
       .where((player) => !draft.selectedPlayerIds.contains(player.id))
       .toList(growable: false);
+  
   final rotation = <int, MatchPlayer?>{};
   draft.startingRotation.forEach((pos, playerId) {
     rotation[pos] = _findPlayerById(roster, playerId);
   });
+  
   return RallyCaptureState(
     draft: draft,
     activePlayers: active,
@@ -303,16 +378,42 @@ class RallyCaptureSessionController extends StateNotifier<RallyCaptureSession> {
   }
 
   void _updateState({
+    String? setId,
+    int? currentSetNumber,
     int? currentRallyNumber,
     List<RallyEvent>? currentEvents,
     List<RallyRecord>? completedRallies,
+    bool? canUndo,
+    bool? canRedo,
   }) {
     state = state.copyWith(
+      setId: setId,
+      currentSetNumber: currentSetNumber,
       currentRallyNumber: currentRallyNumber,
       currentEvents: currentEvents,
       completedRallies: completedRallies,
-      canUndo: _undoStack.isNotEmpty,
-      canRedo: _redoStack.isNotEmpty,
+      canUndo: canUndo ?? _undoStack.isNotEmpty,
+      canRedo: canRedo ?? _redoStack.isNotEmpty,
+    );
+  }
+
+  /// Start a new set (increment set number, reset rally counter and events)
+  Future<void> startNewSet() async {
+    final newSetNumber = state.currentSetNumber + 1;
+    final newSetId = '${state.matchId}-set-$newSetNumber';
+    
+    // Clear undo/redo stacks for new set
+    _undoStack.clear();
+    _redoStack.clear();
+    
+    _updateState(
+      setId: newSetId,
+      currentSetNumber: newSetNumber,
+      currentRallyNumber: 1,
+      currentEvents: const [],
+      completedRallies: const [],
+      canUndo: false,
+      canRedo: false,
     );
   }
 
@@ -350,12 +451,16 @@ class RallyCaptureSessionController extends StateNotifier<RallyCaptureSession> {
 
   // Quick action: Complete rally with loss
   Future<bool> completeRallyWithLoss({MatchPlayer? player, RallyActionTypes? actionType}) async {
-    // If we have events, just complete. Otherwise, add a loss action first.
-    if (state.currentEvents.isEmpty) {
-      if (player != null && actionType != null) {
+    // Always ensure we have a loss-indicating event
+    // If no events exist, add an attack error
+    // If events exist but none are errors, add an attack error to ensure loss
+    bool hasError = state.currentEvents.any((e) => e.type.isError);
+    
+    if (state.currentEvents.isEmpty || !hasError) {
+      if (player != null && actionType != null && actionType.isError) {
         logAction(actionType, player: player);
       } else {
-        // Default to a generic attack error for loss (no player specified)
+        // Default to a generic attack error for loss
         logAction(RallyActionTypes.attackError);
       }
     }
@@ -422,17 +527,28 @@ final runningTotalsProvider = Provider.family<RunningTotals, String>((ref, match
   int substitutions = 0;
   int timeouts = 0;
 
-  // Count stats from completed rallies
-  // Note: Substitutions and timeouts are counted from completed rallies only
-  // (they may be logged as events in rallies, but we only count them once when the rally completes)
+  // Count substitutions and timeouts from both completed rallies AND current events
+  // (they should update immediately when logged, not wait for rally completion)
+  final allTimeoutSubEvents = <RallyEvent>[];
+  
+  // Add from completed rallies
   for (final rally in session.completedRallies) {
-    for (final event in rally.events) {
-      if (event.type == RallyActionTypes.substitution) {
-        substitutions++;
-      } else if (event.type == RallyActionTypes.timeout) {
-        timeouts++;
-      }
+    allTimeoutSubEvents.addAll(rally.events);
+  }
+  
+  // Add from current events (for immediate counter updates)
+  allTimeoutSubEvents.addAll(session.currentEvents);
+  
+  for (final event in allTimeoutSubEvents) {
+    if (event.type == RallyActionTypes.substitution) {
+      substitutions++;
+    } else if (event.type == RallyActionTypes.timeout) {
+      timeouts++;
     }
+  }
+
+  // Count other stats from completed rallies only
+  for (final rally in session.completedRallies) {
     bool isWin = false;
     bool isLoss = false;
     bool hasFBK = false;
@@ -569,8 +685,14 @@ final playerStatsProvider = Provider.family<List<PlayerStats>, String>((ref, mat
   final state = stateAsync.value!;
   final Map<String, PlayerStats> statsMap = {};
   
-  // Initialize stats for all active players
-  for (final player in state.activePlayers) {
+  // Initialize stats for ALL players on the team roster (active + bench)
+  // This ensures any player can be substituted in and will have stats initialized
+  final allRosterPlayers = <MatchPlayer>[];
+  allRosterPlayers.addAll(state.activePlayers);
+  allRosterPlayers.addAll(state.benchPlayers);
+  
+  // Initialize stats for all roster players
+  for (final player in allRosterPlayers) {
     statsMap[player.id] = PlayerStats(
       player: player,
       attackKills: 0,
@@ -585,17 +707,26 @@ final playerStatsProvider = Provider.family<List<PlayerStats>, String>((ref, mat
     );
   }
 
-  // Count stats from completed rallies
+  // Count stats from completed rallies AND current events (for live updates)
+  final allEvents = <RallyEvent>[];
+  
+  // Add completed rally events
   for (final rally in session.completedRallies) {
-    for (final event in rally.events) {
-      if (event.player == null) continue;
-      
-      final playerId = event.player!.id;
-      if (!statsMap.containsKey(playerId)) continue;
-      
-      final current = statsMap[playerId]!;
-      
-      switch (event.type) {
+    allEvents.addAll(rally.events);
+  }
+  
+  // Add current rally events (for live stat updates)
+  allEvents.addAll(session.currentEvents);
+  
+  for (final event in allEvents) {
+    if (event.player == null) continue;
+    
+    final playerId = event.player!.id;
+    if (!statsMap.containsKey(playerId)) continue;
+    
+    final current = statsMap[playerId]!;
+    
+    switch (event.type) {
         case RallyActionTypes.attackKill:
           statsMap[playerId] = PlayerStats(
             player: current.player,
@@ -726,7 +857,6 @@ final playerStatsProvider = Provider.family<List<PlayerStats>, String>((ref, mat
           break;
       }
     }
-  }
 
   return statsMap.values.toList()
     ..sort((a, b) => a.player.jerseyNumber.compareTo(b.player.jerseyNumber));

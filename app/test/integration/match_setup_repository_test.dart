@@ -30,7 +30,7 @@ void main() {
     client = SupabaseClient(url, serviceRoleKey);
     cache = InMemoryMatchDraftCache();
     repository = CachedMatchSetupRepository(
-      primary: SupabaseMatchSetupRepository(client, teamId: defaultTeamId),
+      primary: SupabaseMatchSetupRepository(client),
       cache: cache,
       teamId: defaultTeamId,
     );

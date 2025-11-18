@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
+import '../teams/team_providers.dart';
 import 'models/roster_template.dart';
 import 'providers.dart';
 import 'template_edit_screen.dart';
@@ -111,9 +112,12 @@ class TemplateListScreen extends ConsumerWidget {
     );
 
     if (confirmed == true && context.mounted) {
+      final selectedTeamId = ref.read(selectedTeamIdProvider);
+      final effectiveTeamId = selectedTeamId ?? defaultTeamId;
+      
       final actions = ref.read(templateActionsProvider);
       await actions.deleteTemplate(
-        teamId: defaultTeamId,
+        teamId: effectiveTeamId,
         templateId: template.id,
       );
 

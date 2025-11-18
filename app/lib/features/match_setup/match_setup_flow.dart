@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -7,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import '../../core/providers/supabase_client_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
+import '../teams/team_providers.dart';
 import 'providers.dart';
 import 'models/match_draft.dart';
 import 'models/match_player.dart';
@@ -305,8 +307,10 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
 
     try {
       final repository = ref.read(matchSetupRepositoryProvider);
+      final selectedTeamId = ref.read(selectedTeamIdProvider);
+      final effectiveTeamId = selectedTeamId ?? defaultTeamId;
       await repository.saveDraft(
-        teamId: defaultTeamId,
+        teamId: effectiveTeamId,
         matchId: _matchId,
         draft: _draft,
       );
@@ -315,13 +319,16 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
         setState(() {
           _isAutoSaving = false;
         });
+        if (kDebugMode) {
+          print('Auto-save successful for draft: $_matchId');
+        }
       }
     } catch (error, stackTrace) {
       debugPrint('Auto-save failed: $error\n$stackTrace');
       if (mounted) {
         setState(() {
           _isAutoSaving = false;
-          _lastAutoSaveError = 'Auto-save failed';
+          _lastAutoSaveError = 'Auto-save failed: ${error.toString()}';
         });
       }
     }
@@ -417,8 +424,10 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
     });
 
     try {
+      final selectedTeamId = ref.read(selectedTeamIdProvider);
+      final effectiveTeamId = selectedTeamId ?? defaultTeamId;
       await repository.saveDraft(
-        teamId: defaultTeamId,
+        teamId: effectiveTeamId,
         matchId: _matchId,
         draft: _draft,
       );
@@ -454,8 +463,10 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
     });
 
     try {
+      final selectedTeamId = ref.read(selectedTeamIdProvider);
+      final effectiveTeamId = selectedTeamId ?? defaultTeamId;
       await repository.saveDraft(
-        teamId: defaultTeamId,
+        teamId: effectiveTeamId,
         matchId: _matchId,
         draft: _draft,
       );
@@ -524,9 +535,11 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
     );
 
     if (selected != null && mounted) {
+      final selectedTeamId = ref.read(selectedTeamIdProvider);
+      final effectiveTeamId = selectedTeamId ?? defaultTeamId;
       final actions = ref.read(templateActionsProvider);
       await actions.useTemplate(
-        teamId: defaultTeamId,
+        teamId: effectiveTeamId,
         templateId: selected.id,
       );
       _applyTemplate(selected);
@@ -576,6 +589,9 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
       for (var rotation = 1; rotation <= 6; rotation++) {
         _rotationAssignments[rotation] = template.defaultRotation[rotation];
       }
+      
+      // Update draft state immediately so validation works
+      _updateDraftState();
     });
   }
 

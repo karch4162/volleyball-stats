@@ -3,6 +3,12 @@ import '../models/match_player.dart';
 import '../models/roster_template.dart';
 
 abstract class MatchSetupRepository {
+  /// Check if this repository supports entity creation (requires Supabase connection)
+  bool get supportsEntityCreation;
+
+  /// Check if this repository is connected to Supabase
+  bool get isConnected;
+
   Future<List<MatchPlayer>> fetchRoster({required String teamId});
 
   Future<MatchDraft?> loadDraft({required String matchId});

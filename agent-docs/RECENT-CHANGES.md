@@ -5,7 +5,166 @@
 
 ## Overview
 
-Recent work focused on completing the rally capture screen with comprehensive stat tracking capabilities, including substitution limits and attack efficiency calculations.
+Recent work focused on completing the rally capture screen with comprehensive stat tracking capabilities, including substitution limits and attack efficiency calculations. Latest updates include UI refinements, player card redesign, and improved layout optimization.
+
+---
+
+## Latest Updates (Rally Capture UI Refinements) ✅
+
+### 1. Player Action Buttons with Stat Counts ✅
+
+**Problem:** Player action buttons didn't show current stat counts, requiring users to look elsewhere for statistics.
+
+**Solution:**
+- Added stat count display to each action button
+- Counts appear next to icons using the same color as the icon
+- Real-time updates as actions are logged
+- Compact layout: icon + count on top, label below
+
+**Files Modified:**
+- `app/lib/features/rally_capture/rally_capture_screen.dart` - Updated `_ActionButton` widget
+
+**Key Features:**
+- Each button displays: Icon + Count (top row), Label (bottom)
+- Count text uses button's accent color (indigo for Kill, rose for errors, etc.)
+- Counts update live as actions are logged
+- Removed redundant stat badges (K, A, B) from card header
+
+**Button Mapping:**
+- Kill → `stats.attackKills`
+- Atk Err → `stats.attackErrors`
+- Attempt → `stats.attackAttempts`
+- Block → `stats.blocks`
+- Dig → `stats.digs`
+- Assist → `stats.assists`
+- Ace → `stats.serveAces`
+- Srv Err → `stats.serveErrors`
+- FBK → `stats.fbk`
+
+---
+
+### 2. Glass Theme Button Styling ✅
+
+**Problem:** Action buttons lacked visual depth and didn't match the glass morphism theme.
+
+**Solution:**
+- Applied glass background (`AppColors.glassLight`)
+- Added border matching glass theme (`AppColors.borderMedium`)
+- Implemented shadow glow effect with two shadows:
+  - Colored glow using button's accent color (20% opacity)
+  - Darker shadow for depth/raised effect
+- Buttons now appear raised off the card
+
+**Files Modified:**
+- `app/lib/features/rally_capture/rally_capture_screen.dart` - Updated `_ActionButton` styling
+
+**Visual Effects:**
+- Glass background with subtle transparency
+- Border matching overall theme
+- Colored glow shadow (unique per button type)
+- Depth shadow for raised appearance
+- Material/InkWell for proper tap feedback
+
+---
+
+### 3. Collapsible Score & Timeout Cards ✅
+
+**Problem:** Score card and timeout/substitution card took up too much vertical space, limiting visible players on screen.
+
+**Solution:**
+- Made both cards collapsible with expand/collapse headers
+- Reduced padding and font sizes for more compact display
+- Added visual indicators (expand/collapse icons)
+- Both cards default to expanded state
+
+**Files Modified:**
+- `app/lib/features/rally_capture/rally_capture_screen.dart` - Converted `_RallyCaptureBody` to `ConsumerStatefulWidget`
+
+**Key Features:**
+- **Score Card:**
+  - Header shows match info with expand/collapse icon
+  - Collapsed: Shows only header row
+  - Expanded: Shows team names, scores, and set number
+  - Reduced padding (16px → 12px vertical)
+  - Reduced font sizes (18→16 for names, 24→20 for scores)
+
+- **Timeout/Substitution Card:**
+  - Header shows "Timeouts & Substitutions" with expand/collapse icon
+  - Collapsed: Shows only header row
+  - Expanded: Shows timeout and substitution buttons
+  - Reduced padding for compact display
+
+**State Management:**
+- `_scoreCardExpanded` - Controls score card visibility (default: true)
+- `_timeoutSubCardExpanded` - Controls timeout/sub card visibility (default: true)
+
+---
+
+### 4. Team Name Display in Score Card ✅
+
+**Problem:** Score card showed "Our Team" instead of the actual team name.
+
+**Solution:**
+- Integrated `selectedTeamProvider` to fetch current team
+- Displays team name in score card
+- Falls back to "Our Team" if no team selected
+
+**Files Modified:**
+- `app/lib/features/rally_capture/rally_capture_screen.dart` - Added team provider watch
+
+**Implementation:**
+- Uses `ref.watch(selectedTeamProvider)` to get current team
+- Displays `selectedTeam?.name ?? 'Our Team'` in score card
+- Team name appears on left side with team's score
+
+---
+
+### 5. Substitution Functionality Fixes ✅
+
+**Problem:** Substituted-in players weren't appearing in the player list after substitution.
+
+**Solution:**
+- Updated `playerStatsProvider` to initialize stats for ALL roster players (not just active)
+- Ensures any player can be substituted in and will have stats initialized
+- Simplified logic by initializing all roster players upfront
+
+**Files Modified:**
+- `app/lib/features/rally_capture/providers.dart` - Updated `playerStatsProvider`
+
+**Key Changes:**
+- Initialize stats for all players in roster (active + bench)
+- Any player can be substituted in and will appear immediately
+- Players who don't play will have 0 stats (which is correct)
+- Removed complex tracking of current lineup in stats provider
+
+**Logic:**
+```dart
+// Initialize stats for ALL players on the team roster
+final allRosterPlayers = <MatchPlayer>[];
+allRosterPlayers.addAll(state.activePlayers);
+allRosterPlayers.addAll(state.benchPlayers);
+```
+
+---
+
+### 6. Layout & Spacing Improvements ✅
+
+**Problem:** Player cards were overlapping with header, and cards had inconsistent widths.
+
+**Solution:**
+- Fixed Column layout with proper `crossAxisAlignment: CrossAxisAlignment.stretch`
+- Removed animation wrapper that was constraining width
+- Ensured all cards fill available width consistently
+- Proper spacing between cards (8px)
+
+**Files Modified:**
+- `app/lib/features/rally_capture/rally_capture_screen.dart` - Fixed player card layout
+
+**Layout Fixes:**
+- Wrapped player cards in Column with `crossAxisAlignment.stretch`
+- Removed `AnimatedSwitcher` wrapper (was causing width constraints)
+- Cards now properly expand to full width
+- Consistent spacing with other cards on screen
 
 ---
 
@@ -148,6 +307,25 @@ Recent work focused on completing the rally capture screen with comprehensive st
 
 ## Files Modified
 
+### Recent Updates (Latest Session)
+
+1. `app/lib/features/rally_capture/rally_capture_screen.dart`
+   - Redesigned `_ActionButton` with stat counts and glass styling
+   - Converted `_RallyCaptureBody` to `ConsumerStatefulWidget` for expand/collapse state
+   - Added collapsible score card and timeout/substitution card
+   - Integrated team name display from `selectedTeamProvider`
+   - Fixed player card layout and spacing
+   - Removed redundant stat badges from card header
+
+2. `app/lib/features/rally_capture/providers.dart`
+   - Updated `playerStatsProvider` to initialize stats for all roster players
+   - Simplified substitution handling logic
+
+3. `app/lib/features/teams/team_providers.dart`
+   - Added import for team provider access
+
+### Previous Updates
+
 1. `app/lib/features/rally_capture/models/rally_models.dart`
    - Added `attackAttempt` enum value
    - Updated all extension switch statements
@@ -157,24 +335,23 @@ Recent work focused on completing the rally capture screen with comprehensive st
    - Added `attackAttempts` to `PlayerStats`
    - Updated all stat calculation logic
 
-3. `app/lib/features/rally_capture/rally_capture_screen.dart`
-   - Added substitution counter display
-   - Added substitution limit validation
-   - Added Attack Attempt button to player grid
-   - Updated player stats dialog with efficiency
-
-4. `app/lib/features/rally_capture/data/rally_repository.dart`
+3. `app/lib/features/rally_capture/data/rally_repository.dart`
    - Added `attackAttempt` handling in all mapping functions
 
-5. `app/lib/features/export/csv_export_service.dart`
+4. `app/lib/features/export/csv_export_service.dart`
    - Added `attackAttempt` to CSV export calculations
 
 ---
 
 ## Next Steps
 
-1. **Match Setup Wizard** - Discuss improvements to setup flow
-2. **User Testing** - Test with coaches during practice matches
+1. **User Testing** - Comprehensive testing of rally capture functionality
+   - Test all action buttons and stat tracking
+   - Verify substitution functionality
+   - Test expand/collapse cards
+   - Verify team name display
+   - Test with multiple players and substitutions
+2. **Match Setup Wizard** - Discuss improvements to setup flow
 3. **Performance Testing** - Verify with large number of rallies
 4. **Documentation** - Update user-facing documentation
 
@@ -188,6 +365,16 @@ None currently identified. All linter errors resolved.
 
 ## Success Metrics
 
+### Latest Updates
+- ✅ Player action buttons show real-time stat counts
+- ✅ Glass theme styling with shadow glow effects
+- ✅ Collapsible cards for better screen space usage
+- ✅ Team name displayed correctly in score card
+- ✅ Substitution functionality working correctly
+- ✅ Improved layout and spacing consistency
+- ✅ More players visible on screen
+
+### Previous Updates
 - ✅ Substitution limit tracking implemented and visible
 - ✅ Substitutions don't block rally completion
 - ✅ Attack attempts tracked and included in efficiency calculations

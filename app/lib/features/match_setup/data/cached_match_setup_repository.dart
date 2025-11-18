@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../models/match_draft.dart';
 import '../models/match_player.dart';
 import '../models/roster_template.dart';
@@ -16,6 +18,12 @@ class CachedMatchSetupRepository implements MatchSetupRepository {
   final MatchSetupRepository _primary;
   final MatchDraftCache _cache;
   final String _teamId;
+
+  @override
+  bool get supportsEntityCreation => _primary.supportsEntityCreation;
+
+  @override
+  bool get isConnected => _primary.isConnected;
 
   @override
   Future<List<MatchPlayer>> fetchRoster({required String teamId}) {
@@ -43,9 +51,18 @@ class CachedMatchSetupRepository implements MatchSetupRepository {
     required String matchId,
     required MatchDraft draft,
   }) async {
+    // Always save to cache first (local persistence)
     await _cache.save(matchId, draft);
+    
+    // Then try to save to primary repository (Supabase or in-memory)
     final id = teamId.isEmpty ? _teamId : teamId;
-    await _primary.saveDraft(teamId: id, matchId: matchId, draft: draft);
+    try {
+      await _primary.saveDraft(teamId: id, matchId: matchId, draft: draft);
+    } catch (error, stackTrace) {
+      // Log error but don't fail - local cache already saved
+      debugPrint('Failed to save draft to primary repository: $error\n$stackTrace');
+      rethrow; // Re-throw so caller can handle it
+    }
   }
 
   @override
@@ -58,9 +75,14 @@ class CachedMatchSetupRepository implements MatchSetupRepository {
   Future<void> saveRosterTemplate({
     required String teamId,
     required RosterTemplate template,
-  }) {
+  }) async {
     final id = teamId.isEmpty ? _teamId : teamId;
-    return _primary.saveRosterTemplate(teamId: id, template: template);
+    try {
+      await _primary.saveRosterTemplate(teamId: id, template: template);
+    } catch (error, stackTrace) {
+      debugPrint('Failed to save template to primary repository: $error\n$stackTrace');
+      rethrow; // Re-throw so caller can handle it
+    }
   }
 
   @override

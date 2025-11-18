@@ -172,6 +172,7 @@ class RallyCaptureSession {
   RallyCaptureSession({
     required this.matchId,
     required this.setId,
+    required this.currentSetNumber,
     required this.currentRallyNumber,
     required List<RallyEvent> currentEvents,
     required List<RallyRecord> completedRallies,
@@ -182,6 +183,7 @@ class RallyCaptureSession {
 
   final String matchId;
   final String setId;
+  final int currentSetNumber;
   final int currentRallyNumber;
   final List<RallyEvent> currentEvents;
   final List<RallyRecord> completedRallies;
@@ -191,10 +193,12 @@ class RallyCaptureSession {
   factory RallyCaptureSession.initial({
     required String matchId,
     required String setId,
+    int currentSetNumber = 1,
   }) {
     return RallyCaptureSession(
       matchId: matchId,
       setId: setId,
+      currentSetNumber: currentSetNumber,
       currentRallyNumber: 1,
       currentEvents: const [],
       completedRallies: const [],
@@ -229,6 +233,7 @@ class RallyCaptureSession {
   RallyCaptureSession copyWith({
     String? matchId,
     String? setId,
+    int? currentSetNumber,
     int? currentRallyNumber,
     List<RallyEvent>? currentEvents,
     List<RallyRecord>? completedRallies,
@@ -238,6 +243,7 @@ class RallyCaptureSession {
     return RallyCaptureSession(
       matchId: matchId ?? this.matchId,
       setId: setId ?? this.setId,
+      currentSetNumber: currentSetNumber ?? this.currentSetNumber,
       currentRallyNumber: currentRallyNumber ?? this.currentRallyNumber,
       currentEvents: currentEvents ?? this.currentEvents,
       completedRallies: completedRallies ?? this.completedRallies,

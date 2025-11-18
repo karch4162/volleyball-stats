@@ -13,6 +13,12 @@ class OfflineMatchSetupRepository implements MatchSetupRepository {
   final String teamId;
 
   @override
+  bool get supportsEntityCreation => getSupabaseClientOrNull() != null;
+
+  @override
+  bool get isConnected => getSupabaseClientOrNull() != null;
+
+  @override
   Future<void> saveDraft({
     required String teamId,
     required String matchId,

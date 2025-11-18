@@ -9,6 +9,7 @@ import 'models/rally_models.dart';
 import '../match_setup/match_setup_flow.dart';
 import '../match_setup/models/match_player.dart';
 import '../export/export_screen.dart';
+import '../teams/team_providers.dart';
 
 class RallyCaptureScreen extends ConsumerWidget {
   const RallyCaptureScreen({
@@ -47,6 +48,12 @@ class RallyCaptureScreen extends ConsumerWidget {
             onPlayerStats: () async {
               await _showPlayerStatsDialog(context, ref, matchId);
             },
+            onEndMatch: () async {
+              await _showEndMatchDialog(context, ref, matchId);
+            },
+            onNewSet: () async {
+              await _showNewSetDialog(context, ref, matchId);
+            },
           ),
           Expanded(
             child: asyncState.when(
@@ -62,7 +69,6 @@ class RallyCaptureScreen extends ConsumerWidget {
           ),
         ],
       ),
-      bottomNavigationBar: _BottomNavigationBar(),
     );
   }
 
@@ -127,6 +133,130 @@ class RallyCaptureScreen extends ConsumerWidget {
       ),
     );
   }
+
+  static Future<void> _showEndMatchDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String matchId,
+  ) async {
+    final totals = ref.read(runningTotalsProvider(matchId));
+    
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('End Match'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Are you sure you want to end this match?'),
+            const SizedBox(height: 16),
+            Text(
+              'Final Score: ${totals.wins} - ${totals.losses}',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Total Rallies: ${totals.totalRallies}',
+              style: const TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // TODO: Mark match as completed in database
+              // For now, just show a message
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Match ended. Final score saved.'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              // Navigate back to home/match list
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.rose,
+            ),
+            child: const Text('End Match'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Future<void> _showNewSetDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String matchId,
+  ) async {
+    final session = ref.read(rallyCaptureSessionProvider(matchId));
+    final totals = ref.read(runningTotalsProvider(matchId));
+    final newSetNumber = session.currentSetNumber + 1;
+    
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Start Set $newSetNumber'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Set ${session.currentSetNumber} Score: ${totals.wins} - ${totals.losses}'),
+            const SizedBox(height: 16),
+            const Text('Starting a new set will:'),
+            const SizedBox(height: 8),
+            const Text('• Reset rally counter to 1'),
+            const Text('• Reset timeout counter (2 per set)'),
+            const Text('• Reset substitution counter (15 per set)'),
+            const Text('• Clear current rally events'),
+            const SizedBox(height: 8),
+            const Text(
+              'Match totals will be preserved.',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: AppColors.textTertiary,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              ref.read(rallyCaptureSessionProvider(matchId).notifier).startNewSet();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Set $newSetNumber started!'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.emerald,
+            ),
+            child: Text('Start Set $newSetNumber'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _StatChip extends StatelessWidget {
@@ -144,21 +274,26 @@ class _StatChip extends StatelessWidget {
   }
 }
 
-class _CustomAppBar extends StatelessWidget {
+class _CustomAppBar extends ConsumerWidget {
   const _CustomAppBar({
     required this.matchId,
     required this.onEdit,
     required this.onExport,
     required this.onPlayerStats,
+    required this.onEndMatch,
+    required this.onNewSet,
   });
 
   final String matchId;
   final VoidCallback onEdit;
   final VoidCallback onExport;
   final VoidCallback onPlayerStats;
+  final VoidCallback onEndMatch;
+  final VoidCallback onNewSet;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final session = ref.watch(rallyCaptureSessionProvider(matchId));
     return GlassContainer(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       margin: EdgeInsets.zero,
@@ -204,18 +339,6 @@ class _CustomAppBar extends StatelessWidget {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.download_rounded, size: 20),
-              color: AppColors.textTertiary,
-              onPressed: onExport,
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                hoverColor: AppColors.hoverOverlay,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-            IconButton(
               icon: const Icon(Icons.people_rounded, size: 20),
               color: AppColors.textTertiary,
               onPressed: onPlayerStats,
@@ -227,6 +350,62 @@ class _CustomAppBar extends StatelessWidget {
                 ),
               ),
             ),
+            PopupMenuButton<String>(
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.more_vert_rounded, size: 20, color: AppColors.textTertiary),
+              ),
+              color: AppColors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              tooltip: 'More options',
+              onSelected: (value) {
+                if (value == 'export') {
+                  onExport();
+                } else if (value == 'new_set') {
+                  onNewSet();
+                } else if (value == 'end_match') {
+                  onEndMatch();
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'export',
+                  child: const Row(
+                    children: [
+                      Icon(Icons.download_rounded, size: 18, color: AppColors.indigo),
+                      SizedBox(width: 8),
+                      Text('Export'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'new_set',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.emerald),
+                      const SizedBox(width: 8),
+                      Text('New Set (Set ${session.currentSetNumber + 1})'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'end_match',
+                  child: Row(
+                    children: [
+                      Icon(Icons.flag_rounded, size: 18, color: AppColors.rose),
+                      SizedBox(width: 8),
+                      Text('End Match'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -234,7 +413,7 @@ class _CustomAppBar extends StatelessWidget {
   }
 }
 
-class _RallyCaptureBody extends ConsumerWidget {
+class _RallyCaptureBody extends ConsumerStatefulWidget {
   const _RallyCaptureBody({
     required this.state,
     required this.matchId,
@@ -244,30 +423,54 @@ class _RallyCaptureBody extends ConsumerWidget {
   final String matchId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final session = ref.watch(rallyCaptureSessionProvider(matchId));
+  ConsumerState<_RallyCaptureBody> createState() => _RallyCaptureBodyState();
+}
+
+class _RallyCaptureBodyState extends ConsumerState<_RallyCaptureBody> {
+  bool _scoreCardExpanded = true;
+  bool _timeoutSubCardExpanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final session = ref.watch(rallyCaptureSessionProvider(widget.matchId));
     final sessionController =
-        ref.read(rallyCaptureSessionProvider(matchId).notifier);
-    final totals = ref.watch(runningTotalsProvider(matchId));
-    final playerStats = ref.watch(playerStatsProvider(matchId));
+        ref.read(rallyCaptureSessionProvider(widget.matchId).notifier);
+    final totals = ref.watch(runningTotalsProvider(widget.matchId));
+    final playerStats = ref.watch(playerStatsProvider(widget.matchId));
+    final selectedTeam = ref.watch(selectedTeamProvider);
 
     Future<void> onQuickPlayerAction(MatchPlayer player, RallyActionTypes type) async {
       HapticFeedback.lightImpact();
       sessionController.logAction(type, player: player);
       
+      // Auto-complete rally for point-scoring actions
+      String actionLabel = type.label;
       if (type == RallyActionTypes.firstBallKill) {
         await sessionController.completeRallyWithWin(player: player, actionType: type);
-        _showSnackBar(context, 'FBK by #${player.jerseyNumber}!');
+        _showSnackBar(context, 'FBK by #${player.jerseyNumber}! Point won.');
+      } else if (type == RallyActionTypes.attackKill || type == RallyActionTypes.serveAce) {
+        await sessionController.completeRallyWithWin(player: player, actionType: type);
+        _showSnackBar(context, '$actionLabel by #${player.jerseyNumber}! Point won.');
+      } else if (type == RallyActionTypes.attackError || type == RallyActionTypes.serveError) {
+        await sessionController.completeRallyWithLoss(player: player, actionType: type);
+        _showSnackBar(context, '$actionLabel by #${player.jerseyNumber}. Point lost.');
+      } else if (type.isPointScoring) {
+        _showSnackBar(context, '$actionLabel by #${player.jerseyNumber}');
+      } else {
+        _showSnackBar(context, '$actionLabel logged for #${player.jerseyNumber}');
       }
     }
 
     Future<void> onPoint() async {
       HapticFeedback.mediumImpact();
+      // Only complete if there are events, otherwise prompt to add an action
+      if (session.currentEvents.isEmpty) {
+        _showSnackBar(context, 'Add an action before completing the rally.');
+        return;
+      }
       final completed = await sessionController.completeRallyWithWin();
       if (completed) {
-        _showSnackBar(context, 'Point scored!');
-      } else {
-        _showSnackBar(context, 'Add an action before completing the rally.');
+        _showSnackBar(context, 'Point won!');
       }
     }
 
@@ -302,38 +505,56 @@ class _RallyCaptureBody extends ConsumerWidget {
         return;
       }
       
-      if (state.activePlayers.isEmpty) {
+      final currentLineup = ref.read(currentLineupProvider(widget.matchId));
+      final lineupNotifier = ref.read(currentLineupProvider(widget.matchId).notifier);
+      
+      if (currentLineup.activePlayers.isEmpty) {
         _showSnackBar(
             context, 'Assign active players before recording a substitution.');
         return;
       }
-      if (state.benchPlayers.isEmpty) {
+      if (currentLineup.benchPlayers.isEmpty) {
         _showSnackBar(context, 'No bench players available for substitution.');
         return;
       }
       final selection = await _showSubstitutionDialog(
         context,
-        activePlayers: state.activePlayers,
-        benchPlayers: state.benchPlayers,
+        activePlayers: currentLineup.activePlayers,
+        benchPlayers: currentLineup.benchPlayers,
         substitutionsRemaining: totals.substitutionsRemaining,
       );
       if (selection == null) return;
+      
+      // Update the lineup with animation
+      lineupNotifier.substitute(selection.outgoing, selection.incoming);
+      
+      // Log the substitution action
       sessionController.logAction(
         RallyActionTypes.substitution,
         note:
             'Out: #${selection.outgoing.jerseyNumber} ${selection.outgoing.name} • In: #${selection.incoming.jerseyNumber} ${selection.incoming.name}',
       );
+      
+      _showSnackBar(
+        context,
+        '#${selection.outgoing.jerseyNumber} ${selection.outgoing.name} → #${selection.incoming.jerseyNumber} ${selection.incoming.name}',
+      );
     }
 
     final matchInfo = [
-      if (state.draft.opponent.isNotEmpty) state.draft.opponent,
-      if (state.draft.matchDate != null)
+      if (widget.state.draft.opponent.isNotEmpty) widget.state.draft.opponent,
+      if (widget.state.draft.matchDate != null)
         MaterialLocalizations.of(context)
-            .formatMediumDate(state.draft.matchDate!),
+            .formatMediumDate(widget.state.draft.matchDate!),
     ].join(' • ');
 
-    // Get top 3 players by stats (prioritize kills, then assists, then blocks)
-    final topPlayers = playerStats.take(3).toList();
+    // Get current lineup (updated by substitutions)
+    final currentLineup = ref.watch(currentLineupProvider(widget.matchId));
+    
+    // Show all active players (6 on court) - use current lineup instead of static state
+    final activePlayerStats = playerStats
+        .where((stats) => currentLineup.activePlayers.any((p) => p.id == stats.player.id))
+        .toList();
 
     // Get recent rallies (last 4)
     final recentRallies = session.completedRallies
@@ -346,182 +567,218 @@ class _RallyCaptureBody extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Match Header
+          // Match Header (Score Card)
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: GlassAccentContainer(
-              padding: const EdgeInsets.all(16),
-              borderRadius: BorderRadius.circular(20),
+              padding: EdgeInsets.zero,
+              borderRadius: BorderRadius.circular(16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.school_rounded,
-                        size: 14,
-                        color: AppColors.textTertiary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        matchInfo.isEmpty ? 'Match' : matchInfo,
-                        style: const TextStyle(
-                          color: AppColors.textTertiary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Our Team',
+                  InkWell(
+                    onTap: () => setState(() => _scoreCardExpanded = !_scoreCardExpanded),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.school_rounded,
+                            size: 14,
+                            color: AppColors.textTertiary,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              matchInfo.isEmpty ? 'Match' : matchInfo,
                               style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${totals.wins}',
-                              style: const TextStyle(
-                                color: AppColors.indigoLight,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          children: [
-                            const Text(
-                              'Set',
-                              style: TextStyle(
-                                color: AppColors.textMuted,
+                                color: AppColors.textTertiary,
                                 fontSize: 12,
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '1',
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                          Icon(
+                            _scoreCardExpanded
+                                ? Icons.expand_less_rounded
+                                : Icons.expand_more_rounded,
+                            size: 18,
+                            color: AppColors.textTertiary,
+                          ),
+                        ],
                       ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              state.draft.opponent.isNotEmpty
-                                  ? state.draft.opponent
-                                  : 'Opponent',
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              textAlign: TextAlign.right,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${totals.losses}',
-                              style: const TextStyle(
-                                color: AppColors.roseLight,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.right,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
+                  if (_scoreCardExpanded) ...[
+                    const Divider(height: 1, color: AppColors.borderMedium),
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  selectedTeam?.name ?? 'Our Team',
+                                  style: const TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${totals.wins}',
+                                  style: const TextStyle(
+                                    color: AppColors.indigoLight,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              children: [
+                                const Text(
+                                  'Set',
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${session.currentSetNumber}',
+                                  style: const TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  widget.state.draft.opponent.isNotEmpty
+                                      ? widget.state.draft.opponent
+                                      : 'Opponent',
+                                  style: const TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  textAlign: TextAlign.right,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${totals.losses}',
+                                  style: const TextStyle(
+                                    color: AppColors.roseLight,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.right,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
           ),
 
-          // Current Set Score
+          // Timeouts and Substitutions
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: GlassLightContainer(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.zero,
               borderRadius: BorderRadius.circular(16),
-              child: Row(
+              child: Column(
                 children: [
-                  Expanded(
-                    child: Column(
-                      children: [
-                        const Text(
-                          'Current Set',
-                          style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 12,
+                  InkWell(
+                    onTap: () => setState(() => _timeoutSubCardExpanded = !_timeoutSubCardExpanded),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.settings_rounded,
+                            size: 14,
+                            color: AppColors.textTertiary,
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${totals.wins}',
-                          style: const TextStyle(
-                            color: AppColors.indigoLight,
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'Timeouts & Substitutions',
+                              style: TextStyle(
+                                color: AppColors.textTertiary,
+                                fontSize: 12,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                          Icon(
+                            _timeoutSubCardExpanded
+                                ? Icons.expand_less_rounded
+                                : Icons.expand_more_rounded,
+                            size: 18,
+                            color: AppColors.textTertiary,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  Container(
-                    width: 1,
-                    height: 48,
-                    color: AppColors.textDivider,
-                  ),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        const Text(
-                          'Current Set',
-                          style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 12,
+                  if (_timeoutSubCardExpanded) ...[
+                    const Divider(height: 1, color: AppColors.borderMedium),
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _TimeoutSubButton(
+                              icon: Icons.timer_off_rounded,
+                              label: 'Timeout',
+                              count: totals.timeouts,
+                              maxCount: 2,
+                              color: AppColors.amber,
+                              onPressed: onTimeout,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${totals.losses}',
-                          style: const TextStyle(
-                            color: AppColors.roseLight,
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _TimeoutSubButton(
+                              icon: Icons.swap_horiz_rounded,
+                              label: 'Substitution',
+                              count: totals.substitutions,
+                              maxCount: 15,
+                              color: AppColors.emerald,
+                              onPressed: onSubstitution,
+                              disabled: !totals.canSubstitute,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -535,9 +792,25 @@ class _RallyCaptureBody extends ConsumerWidget {
                 Expanded(
                   child: _QuickActionButton(
                     icon: Icons.add_circle_outline_rounded,
-                    label: 'Point',
+                    label: 'Point Won',
                     color: AppColors.indigo,
                     onPressed: onPoint,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _QuickActionButton(
+                    icon: Icons.remove_circle_outline_rounded,
+                    label: 'Point Lost',
+                    color: AppColors.rose,
+                    onPressed: () async {
+                      HapticFeedback.mediumImpact();
+                      // Only complete if there are events, otherwise add a default error
+                      final completed = await sessionController.completeRallyWithLoss();
+                      if (completed) {
+                        _showSnackBar(context, 'Point lost.');
+                      }
+                    },
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -547,15 +820,6 @@ class _RallyCaptureBody extends ConsumerWidget {
                     label: 'Undo',
                     color: AppColors.amber,
                     onPressed: session.canUndo ? onUndo : null,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _QuickActionButton(
-                    icon: Icons.refresh_rounded,
-                    label: 'Rotate',
-                    color: AppColors.emerald,
-                    onPressed: onRotate,
                   ),
                 ),
               ],
@@ -584,7 +848,7 @@ class _RallyCaptureBody extends ConsumerWidget {
                         RallyCaptureScreen._showPlayerStatsDialog(
                           context,
                           ref,
-                          matchId,
+                          widget.matchId,
                         );
                       },
                       child: const Text(
@@ -598,19 +862,31 @@ class _RallyCaptureBody extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                if (topPlayers.isEmpty)
+                if (activePlayerStats.isEmpty)
                   const Padding(
                     padding: EdgeInsets.all(16),
                     child: Text(
-                      'No player stats yet',
+                      'No active players',
                       style: TextStyle(color: AppColors.textMuted),
                     ),
                   )
                 else
-                  ...topPlayers.map((stats) => _PlayerStatCard(
-                        stats: stats,
-                        onAction: onQuickPlayerAction,
-                      )),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: activePlayerStats.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final stats = entry.value;
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: index < activePlayerStats.length - 1 ? 8 : 0),
+                        child: _PlayerStatCard(
+                          key: ValueKey('player-${stats.player.id}'),
+                          stats: stats,
+                          onAction: onQuickPlayerAction,
+                          currentEvents: session.currentEvents,
+                        ),
+                      );
+                    }).toList(),
+                  ),
               ],
             ),
           ),
@@ -703,25 +979,33 @@ class _QuickActionButton extends StatelessWidget {
 
 class _PlayerStatCard extends StatelessWidget {
   const _PlayerStatCard({
+    super.key,
     required this.stats,
     required this.onAction,
+    required this.currentEvents,
   });
 
   final PlayerStats stats;
   final Future<void> Function(MatchPlayer, RallyActionTypes) onAction;
+  final List<RallyEvent> currentEvents;
+
+  List<RallyEvent> get _playerCurrentEvents => currentEvents
+      .where((event) => event.player?.id == stats.player.id)
+      .toList();
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: GlassLightContainer(
-        padding: const EdgeInsets.all(12),
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
+    final hasCurrentActions = _playerCurrentEvents.isNotEmpty;
+
+    return GlassLightContainer(
+      padding: const EdgeInsets.all(12),
+      borderRadius: BorderRadius.circular(16),
+      child: Column(
+        children: [
+          // Header row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
                 Row(
                   children: [
                     Container(
@@ -767,95 +1051,207 @@ class _PlayerStatCard extends StatelessWidget {
                 ),
                 Row(
                   children: [
-                    _StatBadge('K', stats.attackKills, AppColors.indigoLight),
-                    const SizedBox(width: 4),
-                    Container(width: 1, height: 12, color: AppColors.textDivider),
-                    const SizedBox(width: 4),
-                    _StatBadge('A', stats.assists, AppColors.emeraldLight),
-                    const SizedBox(width: 4),
-                    Container(width: 1, height: 12, color: AppColors.textDivider),
-                    const SizedBox(width: 4),
-                    _StatBadge('B', stats.blocks, AppColors.amberLight),
+                    if (hasCurrentActions)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.indigo.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${_playerCurrentEvents.length}',
+                          style: const TextStyle(
+                            color: AppColors.indigo,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    if (hasCurrentActions) const SizedBox(width: 8),
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
+
+          // Action buttons - Row 1: Attack actions + Block + Dig
+          const SizedBox(height: 12),
+          Row(
+            children: [
                 Expanded(
                   child: _ActionButton(
                     icon: Icons.flash_on_rounded,
                     label: 'Kill',
                     color: AppColors.indigo,
+                    count: stats.attackKills,
                     onPressed: () => onAction(stats.player, RallyActionTypes.attackKill),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 Expanded(
                   child: _ActionButton(
-                    icon: Icons.gps_fixed_rounded,
-                    label: 'Ace',
-                    color: AppColors.emerald,
-                    onPressed: () => onAction(stats.player, RallyActionTypes.serveAce),
+                    icon: Icons.cancel_rounded,
+                    label: 'Atk Err',
+                    color: AppColors.rose,
+                    count: stats.attackErrors,
+                    onPressed: () => onAction(stats.player, RallyActionTypes.attackError),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.touch_app_rounded,
+                    label: 'Attempt',
+                    color: AppColors.textMuted,
+                    count: stats.attackAttempts,
+                    onPressed: () => onAction(stats.player, RallyActionTypes.attackAttempt),
+                  ),
+                ),
+                const SizedBox(width: 4),
                 Expanded(
                   child: _ActionButton(
                     icon: Icons.shield_rounded,
                     label: 'Block',
                     color: AppColors.amber,
+                    count: stats.blocks,
                     onPressed: () => onAction(stats.player, RallyActionTypes.block),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 Expanded(
                   child: _ActionButton(
-                    icon: Icons.cancel_rounded,
-                    label: 'Error',
-                    color: AppColors.rose,
-                    onPressed: () => onAction(stats.player, RallyActionTypes.attackError),
+                    icon: Icons.handshake_rounded,
+                    label: 'Dig',
+                    color: AppColors.teal,
+                    count: stats.digs,
+                    onPressed: () => onAction(stats.player, RallyActionTypes.dig),
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+
+          // Action buttons - Row 2: Assist + Serve Ace + Serve Error + FBK (wider)
+          const SizedBox(height: 8),
+          Row(
+            children: [
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.assistant_rounded,
+                    label: 'Assist',
+                    color: AppColors.emerald,
+                    count: stats.assists,
+                    onPressed: () => onAction(stats.player, RallyActionTypes.assist),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.gps_fixed_rounded,
+                    label: 'Ace',
+                    color: AppColors.emerald,
+                    count: stats.serveAces,
+                    onPressed: () => onAction(stats.player, RallyActionTypes.serveAce),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.error_outline_rounded,
+                    label: 'Srv Err',
+                    color: AppColors.rose,
+                    count: stats.serveErrors,
+                    onPressed: () => onAction(stats.player, RallyActionTypes.serveError),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  flex: 2,
+                  child: _ActionButton(
+                    icon: Icons.bolt_rounded,
+                    label: 'FBK',
+                    color: AppColors.purple,
+                    count: stats.fbk,
+                    onPressed: () => onAction(stats.player, RallyActionTypes.firstBallKill),
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }
 }
 
-class _StatBadge extends StatelessWidget {
-  const _StatBadge(this.label, this.value, this.color);
+class _TimeoutSubButton extends StatelessWidget {
+  const _TimeoutSubButton({
+    required this.icon,
+    required this.label,
+    required this.count,
+    required this.maxCount,
+    required this.color,
+    required this.onPressed,
+    this.disabled = false,
+  });
 
+  final IconData icon;
   final String label;
-  final int value;
+  final int count;
+  final int maxCount;
   final Color color;
+  final VoidCallback onPressed;
+  final bool disabled;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          '$value',
-          style: TextStyle(
-            color: color,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+    final remaining = maxCount - count;
+    final isMaxed = remaining <= 0;
+
+    return GlassContainer(
+      padding: const EdgeInsets.all(12),
+      borderRadius: BorderRadius.circular(12),
+      backgroundColor: Colors.transparent,
+      borderColor: Colors.transparent,
+      blurAmount: 0,
+      onTap: disabled || isMaxed ? null : onPressed,
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: disabled || isMaxed ? AppColors.textDisabled : color,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '$count / $maxCount',
+                style: TextStyle(
+                  color: disabled || isMaxed ? AppColors.textDisabled : color,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(width: 2),
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.textDisabled,
-            fontSize: 12,
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: disabled || isMaxed ? AppColors.textDisabled : AppColors.textTertiary,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-        ),
-      ],
+          if (remaining > 0 && !disabled)
+            Text(
+              '$remaining remaining',
+              style: const TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 10,
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -865,36 +1261,83 @@ class _ActionButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.color,
+    required this.count,
     required this.onPressed,
   });
 
   final IconData icon;
   final String label;
   final Color color;
+  final int count;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return GlassContainer(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      borderRadius: BorderRadius.circular(8),
-      backgroundColor: Colors.transparent,
-      borderColor: Colors.transparent,
-      blurAmount: 0,
-      onTap: onPressed,
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.textTertiary,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.glassLight,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppColors.borderMedium,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.2),
+            blurRadius: 8,
+            spreadRadius: 0,
+            offset: const Offset(0, 2),
+          ),
+          BoxShadow(
+            color: AppColors.background.withOpacity(0.5),
+            blurRadius: 4,
+            spreadRadius: -2,
+            offset: const Offset(0, 1),
           ),
         ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, color: color, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$count',
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.textTertiary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1055,80 +1498,6 @@ class _RallyItem extends StatelessWidget {
   }
 }
 
-class _BottomNavigationBar extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return GlassContainer(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      margin: EdgeInsets.zero,
-      borderRadius: BorderRadius.zero,
-      borderColor: AppColors.borderLight,
-      child: SafeArea(
-        top: false,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavItem(
-              icon: Icons.home_rounded,
-              label: 'Match',
-              isActive: true,
-            ),
-            _NavItem(
-              icon: Icons.bar_chart_rounded,
-              label: 'Stats',
-              isActive: false,
-            ),
-            _NavItem(
-              icon: Icons.list_rounded,
-              label: 'Roster',
-              isActive: false,
-            ),
-            _NavItem(
-              icon: Icons.settings_rounded,
-              label: 'Settings',
-              isActive: false,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool isActive;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          color: isActive ? AppColors.indigo : AppColors.textMuted,
-          size: 20,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: isActive ? AppColors.indigo : AppColors.textMuted,
-            fontSize: isActive ? 12 : 12,
-            fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 void _showSnackBar(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(

@@ -36,6 +36,9 @@ class AppColors {
   static const Color purple = Color(0xFFC084FC); // purple-400
   static const Color purpleLight = Color(0xFFD8B4FE); // purple-300
   
+  static const Color teal = Color(0xFF2DD4BF); // teal-400
+  static const Color tealLight = Color(0xFF5EEAD4); // teal-300
+  
   // Borders
   static const Color borderLight = Color.fromRGBO(255, 255, 255, 0.1);
   static const Color borderMedium = Color.fromRGBO(255, 255, 255, 0.08);

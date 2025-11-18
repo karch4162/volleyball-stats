@@ -1,72 +1,38 @@
 import 'dart:async';
 
+import '../../../core/errors/repository_errors.dart';
 import '../models/match_draft.dart';
 import '../models/match_player.dart';
 import '../models/roster_template.dart';
 import 'match_setup_repository.dart';
 
+/// Read-only in-memory repository that returns empty data
+/// Used when Supabase is not connected - prevents hardcoded data from being used
 class InMemoryMatchSetupRepository implements MatchSetupRepository {
   InMemoryMatchSetupRepository({
-    List<MatchPlayer>? seedRoster,
     Map<String, MatchDraft>? seedDrafts,
     Map<String, RosterTemplate>? seedTemplates,
-  })  : _roster = seedRoster ?? _defaultRoster,
-        _drafts = seedDrafts ?? <String, MatchDraft>{},
-        _templates = seedTemplates ?? <String, RosterTemplate>{};
+    Map<String, List<MatchPlayer>>? seedRoster,
+  })  : _drafts = seedDrafts ?? <String, MatchDraft>{},
+        _templates = seedTemplates ?? <String, RosterTemplate>{},
+        _roster = seedRoster ?? <String, List<MatchPlayer>>{};
 
-  final List<MatchPlayer> _roster;
   final Map<String, MatchDraft> _drafts;
   final Map<String, RosterTemplate> _templates;
+  final Map<String, List<MatchPlayer>> _roster;
 
-  static final List<MatchPlayer> _defaultRoster = [
-    const MatchPlayer(
-      id: 'player-avery',
-      name: 'Avery Harper',
-      jerseyNumber: 2,
-      position: 'Setter',
-    ),
-    const MatchPlayer(
-      id: 'player-bailey',
-      name: 'Bailey Jordan',
-      jerseyNumber: 5,
-      position: 'Opposite',
-    ),
-    const MatchPlayer(
-      id: 'player-casey',
-      name: 'Casey Lane',
-      jerseyNumber: 11,
-      position: 'Outside Hitter',
-    ),
-    const MatchPlayer(
-      id: 'player-devon',
-      name: 'Devon Cruz',
-      jerseyNumber: 9,
-      position: 'Middle Blocker',
-    ),
-    const MatchPlayer(
-      id: 'player-elliot',
-      name: 'Elliot Kim',
-      jerseyNumber: 4,
-      position: 'Libero',
-    ),
-    const MatchPlayer(
-      id: 'player-finley',
-      name: 'Finley Brooks',
-      jerseyNumber: 7,
-      position: 'Middle Blocker',
-    ),
-    const MatchPlayer(
-      id: 'player-greer',
-      name: 'Greer Miles',
-      jerseyNumber: 10,
-      position: 'Outside Hitter',
-    ),
-  ];
+  @override
+  bool get supportsEntityCreation => false; // Never allow creation offline
+
+  @override
+  bool get isConnected => false; // Not connected to Supabase
 
   @override
   Future<List<MatchPlayer>> fetchRoster({required String teamId}) async {
+    // Return seeded roster if available, otherwise empty list
+    // This allows tests to seed data while preventing hardcoded production data
     await Future<void>.delayed(const Duration(milliseconds: 100));
-    return _roster;
+    return _roster[teamId] ?? [];
   }
 
   @override
@@ -81,6 +47,8 @@ class InMemoryMatchSetupRepository implements MatchSetupRepository {
     required String matchId,
     required MatchDraft draft,
   }) async {
+    // Allow draft saving to in-memory cache for offline editing
+    // But note: drafts won't sync to Supabase until connected
     await Future<void>.delayed(const Duration(milliseconds: 80));
     _drafts[matchId] = draft;
   }
@@ -109,8 +77,8 @@ class InMemoryMatchSetupRepository implements MatchSetupRepository {
     required String teamId,
     required RosterTemplate template,
   }) async {
-    await Future<void>.delayed(const Duration(milliseconds: 80));
-    _templates[template.id] = template;
+    // Block entity creation when offline
+    throw const OfflineEntityCreationException('roster template');
   }
 
   @override
@@ -118,8 +86,8 @@ class InMemoryMatchSetupRepository implements MatchSetupRepository {
     required String teamId,
     required String templateId,
   }) async {
-    await Future<void>.delayed(const Duration(milliseconds: 80));
-    _templates.remove(templateId);
+    // Block deletion when offline
+    throw const OfflineEntityCreationException('roster template deletion');
   }
 
   @override
@@ -127,11 +95,8 @@ class InMemoryMatchSetupRepository implements MatchSetupRepository {
     required String teamId,
     required String templateId,
   }) async {
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-    final template = _templates[templateId];
-    if (template != null) {
-      _templates[templateId] = template.markUsed();
-    }
+    // Block updates when offline (templates are Supabase-only)
+    throw const OfflineEntityCreationException('roster template update');
   }
 }
 

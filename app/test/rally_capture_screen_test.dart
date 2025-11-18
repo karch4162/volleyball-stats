@@ -76,7 +76,7 @@ void main() {
     );
 
     final repository = InMemoryMatchSetupRepository(
-      seedRoster: fakeRoster,
+      seedRoster: {defaultTeamId: fakeRoster},
       seedDrafts: {defaultMatchDraftId: fakeDraft},
     );
 

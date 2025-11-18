@@ -1,8 +1,8 @@
 # STATUS
 
-- **Date:** 2025-01-XX (Updated after Rally Capture UI improvements and stat tracking enhancements)
+- **Date:** 2025-01-XX (Updated after Rally Capture UI refinements and testing preparation)
 - **Phase:** Phase 2 – Simplified Architecture & Local Storage + UI/UX Improvements + Stat Tracking
-- **Summary:** Major UI/UX overhaul of rally capture screen completed with comprehensive stat tracking. Implemented scoreboard-first layout with prominent running totals, quick-tap player action grid, and one-tap win/loss buttons. Reduced data entry from 3-4 taps to 1 tap for most actions. Added real-time stat tracking (FBK, Wins, Losses, Transition Points, Substitutions, Timeouts) and per-player statistics breakdown with attack efficiency calculations. Substitution limit tracking (15 per set) and attack attempt tracking for complete efficiency ratios. All core functionality working with improved user experience optimized for mobile use during live matches.
+- **Summary:** Major UI/UX overhaul of rally capture screen completed with comprehensive stat tracking. Implemented scoreboard-first layout with prominent running totals, quick-tap player action grid, and one-tap win/loss buttons. Reduced data entry from 3-4 taps to 1 tap for most actions. Added real-time stat tracking (FBK, Wins, Losses, Transition Points, Substitutions, Timeouts) and per-player statistics breakdown with attack efficiency calculations. Latest refinements include player action buttons with live stat counts, glass theme styling with shadow glow effects, collapsible score and timeout cards for better screen space, team name display, and improved layout consistency. All core functionality working with improved user experience optimized for mobile use during live matches. Ready for comprehensive user testing.
 - **Completed:** 
   - Scoreboard-first rally capture UI with running totals display
   - Quick Win/Loss rally buttons (one-tap completion)
@@ -19,8 +19,14 @@
   - **Attack efficiency calculation** (Kills - Errors) / Total Attempts
   - **Kill percentage calculation** (Kills / Total Attempts)
   - Updated all repositories and export services to handle new action types
+  - **Player action buttons with live stat counts** (icon + count + label layout)
+  - **Glass theme button styling** (glass background, borders, shadow glow effects)
+  - **Collapsible score and timeout cards** (expand/collapse for better screen space)
+  - **Team name display in score card** (shows actual team name from selectedTeamProvider)
+  - **Substitution functionality fixes** (substituted players appear immediately)
+  - **Layout and spacing improvements** (consistent card widths, proper spacing)
 - **Next Up:** 
-  - User testing and feedback collection
+  - **Comprehensive user testing** - Test all functionality before next phase
   - Match setup wizard improvements (discussion pending)
   - Tablet/responsive layout optimizations (V2)
   - Swipe gestures for undo/redo (Phase 2 enhancement)

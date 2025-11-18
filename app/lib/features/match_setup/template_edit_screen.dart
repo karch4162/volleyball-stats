@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../teams/team_providers.dart';
 import 'models/roster_template.dart';
 import 'providers.dart';
 import 'constants.dart';
@@ -275,6 +277,10 @@ class _TemplateEditScreenState extends ConsumerState<TemplateEditScreen> {
           if (entry.value != null) entry.key: entry.value!,
       };
 
+      // Get the selected team ID (or fallback to default for backwards compatibility)
+      final selectedTeamId = ref.read(selectedTeamIdProvider);
+      final effectiveTeamId = selectedTeamId ?? defaultTeamId;
+
       if (widget.template != null) {
         // Update existing template
         final repository = ref.read(matchSetupRepositoryProvider);
@@ -287,14 +293,14 @@ class _TemplateEditScreenState extends ConsumerState<TemplateEditScreen> {
           defaultRotation: rotation,
         );
         await repository.saveRosterTemplate(
-          teamId: defaultTeamId,
+          teamId: effectiveTeamId,
           template: updated,
         );
         ref.invalidate(rosterTemplatesDefaultProvider);
       } else {
         // Create new template
         await actions.saveTemplate(
-          teamId: defaultTeamId,
+          teamId: effectiveTeamId,
           name: _nameController.text.trim(),
           description: _descriptionController.text.trim().isEmpty
               ? null
@@ -306,7 +312,7 @@ class _TemplateEditScreenState extends ConsumerState<TemplateEditScreen> {
 
       if (!mounted) return;
 
-      Navigator.of(context).pop(true);
+      // Show success message before popping
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -317,13 +323,23 @@ class _TemplateEditScreenState extends ConsumerState<TemplateEditScreen> {
           backgroundColor: AppColors.glass,
         ),
       );
-    } catch (error) {
+      
+      // Small delay to ensure snackbar is shown
+      await Future.delayed(const Duration(milliseconds: 100));
+      
       if (!mounted) return;
-
+      Navigator.of(context).pop(true);
+    } catch (error, stackTrace) {
+      debugPrint('Failed to save template: $error\n$stackTrace');
+      debugPrint('Stack trace: $stackTrace');
+      if (!mounted) return;
+      
+      // Show error message - don't pop on error
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to save template: $error'),
+          content: Text('Failed to save template: ${error.toString()}'),
           backgroundColor: AppColors.rose,
+          duration: const Duration(seconds: 5),
         ),
       );
     } finally {
