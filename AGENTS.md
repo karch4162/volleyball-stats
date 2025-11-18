@@ -2,17 +2,16 @@
 
 ## Project Structure & Module Organization
 - `app/`: Flutter client for Android/iOS/Web with screens for rally input, serve tracker, substitutions, and history dashboards mirroring the StatSheet columns (transition, FBK, wins/losses, serve rotations, player attack/block grids).
-- `server/`: Node.js (Nest/Fastify) middle tier for orchestration, validation, and background jobs (stat rollups, exports).
-- `supabase/`: SQL migrations, Row Level Security policies, and Edge Functions for syncing offline data to Postgres.
+- **NOTE:** Simplified architecture with no Node.js backend - all processing done locally in Flutter with optional Supabase sync.
+- `supabase/`: SQL migrations, Row Level Security policies, and Edge Functions for optional cloud backup and sync.
 - `docs/`: UX mocks, spreadsheet references (e.g., `StatSheet.png`), and decision records.
 - `ops/`: CI workflows, environment templates, and infrastructure scripts.
 
 ## Build, Test, and Development Commands
 - `flutter pub get && flutter run -d chrome|ios|android`: install deps and launch the client for the targeted platform.
 - `flutter test`: unit/widget test suite for calculators and UI logic.
-- `npm --prefix server run dev`: start the Node.js API with hot reload.
-- `npm --prefix server test`: run API tests (Jest/Vitest) covering aggregation logic.
-- `supabase start`: boot local Supabase stack (Postgres, Auth, storage) for end-to-end runs.
+- `supabase start`: boot local Supabase stack (Postgres, Auth, storage) for optional cloud sync (note: app works fully offline).
+- `flutter build apk|web|ios`: build for release.
 
 ## Coding Style & Naming Conventions
 - Flutter: prefer Dart lints (`flutter_lints`), 2-space indentation, PascalCase widgets, camelCase state hooks/providers, snake_case files (e.g., `serve_tracker_view.dart`).

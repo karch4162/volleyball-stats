@@ -5,11 +5,8 @@ import '../match_setup/constants.dart';
 import '../match_setup/models/match_draft.dart';
 import '../match_setup/models/match_player.dart';
 import '../match_setup/providers.dart';
-import '../../core/supabase.dart';
 import 'models/rally_models.dart';
 import 'data/rally_sync_repository.dart';
-import 'data/rally_repository.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 class RallyCaptureState {
   RallyCaptureState({
@@ -62,19 +59,6 @@ final rallyCaptureStateProvider =
   );
 });
 
-// Provider for the rally sync repository
-final rallySyncRepositoryProvider = Provider<RallySyncRepository>((ref) {
-  final supabaseClient = getSupabaseClientOrNull();
-  if (supabaseClient == null) {
-    // Return a mock/no-op repository when Supabase is not available
-    return MockRallySyncRepository();
-  }
-  
-  // For now, return a mock sync repo even when Supabase is available
-  // In production, you'd initialize the real repository here with proper Hive setup
-  return MockRallySyncRepository();
-});
-
 // Mock repository used when Supabase is not available
 class MockRallySyncRepository implements RallySyncRepository {
   @override
@@ -86,9 +70,7 @@ class MockRallySyncRepository implements RallySyncRepository {
     required String setId,
     required RallyRecord rallyRecord,
     required int rotation,
-  }) async {
-    // No-op when Supabase is not available
-  }
+  }) async {}
   
   @override
   Future<void> queueSpecialActionForSync({
@@ -98,9 +80,7 @@ class MockRallySyncRepository implements RallySyncRepository {
     required MatchPlayer? playerIn,
     required MatchPlayer? playerOut,
     required String? note,
-  }) async {
-    // No-op when Supabase is not available
-  }
+  }) async {}
   
   @override
   Future<SyncResult> syncPendingRallies() async {
@@ -118,6 +98,13 @@ class MockRallySyncRepository implements RallySyncRepository {
   @override
   Future<void> clearPendingRallies() async {}
 }
+
+// Provider for the rally sync repository
+final rallySyncRepositoryProvider = Provider<RallySyncRepository>((ref) {
+  return MockRallySyncRepository();
+});
+
+
 
 final rallyCaptureSessionProvider = StateNotifierProvider.family<
     RallyCaptureSessionController, RallyCaptureSession, String>(
