@@ -1,22 +1,36 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/providers/supabase_client_provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/widgets/glass_container.dart';
 import 'providers.dart';
 import 'models/match_draft.dart';
 import 'models/match_player.dart';
+import 'models/roster_template.dart';
 import '../rally_capture/rally_capture_screen.dart';
+import 'template_edit_screen.dart';
 import 'widgets/match_metadata_step.dart';
 import 'widgets/roster_selection_step.dart';
 import 'widgets/rotation_setup_step.dart';
 import 'widgets/summary_step.dart';
+import 'widgets/streamlined_setup_body.dart';
 import 'constants.dart';
 
 class MatchSetupFlow extends ConsumerStatefulWidget {
-  const MatchSetupFlow({super.key, this.matchId});
+  const MatchSetupFlow({
+    super.key,
+    this.matchId,
+    this.lastDraft,
+    this.template,
+  });
 
   final String? matchId;
+  final MatchDraft? lastDraft;
+  final RosterTemplate? template;
 
   @override
   ConsumerState<MatchSetupFlow> createState() => _MatchSetupFlowState();
@@ -36,6 +50,9 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
   };
   late final String _matchId;
   bool _isSaving = false;
+  bool _isAutoSaving = false;
+  String? _lastAutoSaveError;
+  Timer? _autoSaveTimer;
   late final bool _isSupabaseEnabled;
 
   @override
@@ -44,11 +61,23 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
     _isSupabaseEnabled = ref.read(supabaseClientProvider) != null;
     _matchId = widget.matchId ??
         (_isSupabaseEnabled ? defaultMatchDraftId : const Uuid().v4());
-    Future.microtask(_loadDraft);
+    _setupAutoSaveListeners();
+    Future.microtask(_initializeDraft);
+  }
+
+  void _setupAutoSaveListeners() {
+    // Listen to text field changes
+    _opponentController.addListener(_scheduleAutoSave);
+    _locationController.addListener(_scheduleAutoSave);
+    _seasonLabelController.addListener(_scheduleAutoSave);
   }
 
   @override
   void dispose() {
+    _autoSaveTimer?.cancel();
+    _opponentController.removeListener(_scheduleAutoSave);
+    _locationController.removeListener(_scheduleAutoSave);
+    _seasonLabelController.removeListener(_scheduleAutoSave);
     _opponentController.dispose();
     _locationController.dispose();
     _seasonLabelController.dispose();
@@ -62,6 +91,47 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Match Setup'),
+        actions: [
+          // Auto-save indicator
+          if (_isAutoSaving)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else if (_lastAutoSaveError != null)
+            IconButton(
+              icon: const Icon(Icons.error_outline_rounded),
+              tooltip: _lastAutoSaveError,
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(_lastAutoSaveError!),
+                    action: SnackBarAction(
+                      label: 'Retry',
+                      onPressed: () => _performAutoSave(),
+                    ),
+                  ),
+                );
+              },
+            )
+          else if (_draft.opponent.isNotEmpty || 
+                   _draft.selectedPlayerIds.isNotEmpty ||
+                   _draft.startingRotation.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Icon(Icons.check_circle_outline_rounded, size: 20),
+            ),
+          if (_draft.hasRotation && _selectedPlayerIds.length >= 6)
+            IconButton(
+              icon: const Icon(Icons.star_outline_rounded),
+              tooltip: 'Save as Template',
+              onPressed: () => _saveAsTemplate(context),
+            ),
+        ],
       ),
       body: rosterAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -71,40 +141,29 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
         ),
         data: (roster) {
           _pruneSelections(roster);
-          final steps = _buildSteps(roster);
+          _updateDraftState();
 
-          return Stepper(
-            type: StepperType.horizontal,
-            currentStep: _currentStep,
-            onStepContinue: _isSaving ? null : () => _handleContinue(),
-            onStepCancel: _handleBack,
-            controlsBuilder: (context, details) {
-              final isLastStep = _currentStep == steps.length - 1;
-              return Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Row(
-                  children: [
-                    FilledButton(
-                      onPressed: _isSaving ? null : details.onStepContinue,
-                      child: Text(
-                        _isSaving
-                            ? 'Saving...'
-                            : isLastStep
-                                ? 'Finish'
-                                : 'Continue',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    if (_currentStep > 0)
-                      TextButton(
-                        onPressed: details.onStepCancel,
-                        child: const Text('Back'),
-                      ),
-                  ],
-                ),
-              );
-            },
-            steps: steps,
+          return StreamlinedSetupBody(
+            draft: _draft,
+            roster: roster,
+            selectedPlayerIds: _selectedPlayerIds,
+            rotationAssignments: _rotationAssignments,
+            opponentController: _opponentController,
+            locationController: _locationController,
+            seasonLabelController: _seasonLabelController,
+            matchDate: _matchDate,
+            onTogglePlayer: _togglePlayerSelection,
+            onSelectRotation: _updateRotationSelection,
+            onPickDate: () => _pickMatchDate(context),
+            onUseTemplate: widget.template == null && _selectedPlayerIds.isEmpty
+                ? () => _showTemplatePicker(context, ref)
+                : null,
+            onCloneLast: widget.lastDraft == null && _selectedPlayerIds.isEmpty
+                ? () => _applyLastDraft(ref)
+                : null,
+            onSaveDraft: () => _saveDraft(context, ref),
+            onStartMatch: () => _handleSubmit(context, ref),
+            isSaving: _isSaving,
           );
         },
       ),
@@ -188,13 +247,84 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
       } else {
         _selectedPlayerIds.add(playerId);
       }
+      _updateDraftState();
     });
+    _scheduleAutoSave();
   }
 
   void _updateRotationSelection(int rotation, String? playerId) {
     setState(() {
       _rotationAssignments[rotation] = playerId;
+      _updateDraftState();
     });
+    _scheduleAutoSave();
+  }
+
+  void _updateDraftState() {
+    final rotation = <int, String>{
+      for (final entry in _rotationAssignments.entries)
+        if (entry.value != null) entry.key: entry.value!,
+    };
+
+    _draft = _draft.copyWith(
+      opponent: _opponentController.text.trim(),
+      matchDate: _matchDate,
+      location: _locationController.text.trim(),
+      seasonLabel: _seasonLabelController.text.trim(),
+      selectedPlayerIds: _selectedPlayerIds,
+      startingRotation: rotation,
+    );
+  }
+
+  void _scheduleAutoSave() {
+    // Cancel existing timer
+    _autoSaveTimer?.cancel();
+    
+    // Schedule new auto-save after 2 seconds of inactivity
+    _autoSaveTimer = Timer(const Duration(seconds: 2), () {
+      _performAutoSave();
+    });
+  }
+
+  Future<void> _performAutoSave() async {
+    if (_isSaving || _isAutoSaving) return;
+    
+    _updateDraftState();
+    
+    // Skip auto-save if draft is empty (no meaningful data)
+    if (_draft.opponent.isEmpty && 
+        _draft.selectedPlayerIds.isEmpty && 
+        _draft.startingRotation.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _isAutoSaving = true;
+      _lastAutoSaveError = null;
+    });
+
+    try {
+      final repository = ref.read(matchSetupRepositoryProvider);
+      await repository.saveDraft(
+        teamId: defaultTeamId,
+        matchId: _matchId,
+        draft: _draft,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _isAutoSaving = false;
+        });
+      }
+    } catch (error, stackTrace) {
+      debugPrint('Auto-save failed: $error\n$stackTrace');
+      if (mounted) {
+        setState(() {
+          _isAutoSaving = false;
+          _lastAutoSaveError = 'Auto-save failed';
+        });
+      }
+    }
   }
 
   void _handleBack() {
@@ -242,7 +372,7 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
         }
         break;
       case 3:
-        await _handleSubmit();
+        await _handleSubmit(context, ref);
         break;
     }
   }
@@ -276,7 +406,48 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
     return true;
   }
 
-  Future<void> _handleSubmit() async {
+  Future<void> _saveDraft(BuildContext context, WidgetRef ref) async {
+    // Cancel any pending auto-save
+    _autoSaveTimer?.cancel();
+    
+    _updateDraftState();
+    final repository = ref.read(matchSetupRepositoryProvider);
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      await repository.saveDraft(
+        teamId: defaultTeamId,
+        matchId: _matchId,
+        draft: _draft,
+      );
+      if (!mounted) return;
+      _showSnackBar('Draft saved');
+      // Clear any auto-save error on successful manual save
+      setState(() {
+        _lastAutoSaveError = null;
+      });
+    } catch (error, stackTrace) {
+      debugPrint('Failed to save draft: $error\n$stackTrace');
+      if (!mounted) return;
+      _showSnackBar('Failed to save draft. Please retry.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleSubmit(BuildContext context, WidgetRef ref) async {
+    // Cancel any pending auto-save
+    _autoSaveTimer?.cancel();
+    
+    // Ensure draft state is up to date
+    _updateDraftState();
+    
     final repository = ref.read(matchSetupRepositoryProvider);
     setState(() {
       _isSaving = true;
@@ -313,13 +484,102 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
     );
   }
 
-  Future<void> _loadDraft() async {
-    final repository = ref.read(matchSetupRepositoryProvider);
-    final draft = await repository.loadDraft(matchId: _matchId);
-    if (draft == null || !mounted) {
+  Future<void> _saveAsTemplate(BuildContext context) async {
+    final rotation = <int, String>{
+      for (final entry in _rotationAssignments.entries)
+        if (entry.value != null) entry.key: entry.value!,
+    };
+
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => TemplateEditScreen(
+          initialPlayerIds: _selectedPlayerIds,
+          initialRotation: rotation,
+        ),
+      ),
+    );
+
+    if (saved == true && mounted) {
+      _showSnackBar('Template saved!');
+    }
+  }
+
+  Future<void> _showTemplatePicker(BuildContext context, WidgetRef ref) async {
+    final templatesAsync = ref.read(rosterTemplatesDefaultProvider);
+    final templates = await templatesAsync.when(
+      data: (templates) => templates,
+      loading: () => <RosterTemplate>[],
+      error: (_, __) => <RosterTemplate>[],
+    );
+
+    if (templates.isEmpty) {
+      _showSnackBar('No templates available. Create one first!');
       return;
     }
 
+    final selected = await showModalBottomSheet<RosterTemplate>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _TemplatePickerSheet(templates: templates),
+    );
+
+    if (selected != null && mounted) {
+      final actions = ref.read(templateActionsProvider);
+      await actions.useTemplate(
+        teamId: defaultTeamId,
+        templateId: selected.id,
+      );
+      _applyTemplate(selected);
+    }
+  }
+
+  Future<void> _applyLastDraft(WidgetRef ref) async {
+    final lastDraftAsync = ref.read(lastMatchDraftProvider);
+    MatchDraft? draft;
+    await lastDraftAsync.when(
+      data: (d) {
+        draft = d as MatchDraft?;
+      },
+      loading: () {},
+      error: (_, __) {},
+    );
+    
+    if (draft != null && mounted) {
+      _applyDraft(draft!);
+    } else if (mounted) {
+      _showSnackBar('No previous match found');
+    }
+  }
+
+  Future<void> _initializeDraft() async {
+    // Pre-populate from template or last draft if provided
+    if (widget.template != null) {
+      _applyTemplate(widget.template!);
+      return;
+    }
+
+    if (widget.lastDraft != null) {
+      _applyDraft(widget.lastDraft!);
+      return;
+    }
+
+    // Otherwise, try loading from repository
+    await _loadDraft();
+  }
+
+  void _applyTemplate(RosterTemplate template) {
+    setState(() {
+      _selectedPlayerIds.clear();
+      _selectedPlayerIds.addAll(template.playerIds);
+      
+      _rotationAssignments.clear();
+      for (var rotation = 1; rotation <= 6; rotation++) {
+        _rotationAssignments[rotation] = template.defaultRotation[rotation];
+      }
+    });
+  }
+
+  void _applyDraft(MatchDraft draft) {
     setState(() {
       _draft = draft;
       _opponentController.text = draft.opponent;
@@ -334,6 +594,16 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
         _rotationAssignments[rotation] = draft.startingRotation[rotation];
       }
     });
+  }
+
+  Future<void> _loadDraft() async {
+    final repository = ref.read(matchSetupRepositoryProvider);
+    final draft = await repository.loadDraft(matchId: _matchId);
+    if (draft == null || !mounted) {
+      return;
+    }
+
+    _applyDraft(draft);
   }
 
   void _pruneSelections(List<MatchPlayer> roster) {
@@ -365,6 +635,84 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
         });
       });
     }
+  }
+}
+
+class _TemplatePickerSheet extends StatelessWidget {
+  const _TemplatePickerSheet({required this.templates});
+
+  final List<RosterTemplate> templates;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassContainer(
+      padding: EdgeInsets.zero,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Text(
+                    'Select Template',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    color: AppColors.textMuted,
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: templates.length,
+                itemBuilder: (context, index) {
+                  final template = templates[index];
+                  return ListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.indigoDark.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.star_rounded,
+                        color: AppColors.indigo,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      template.name,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: Text(
+                      '${template.playerIds.length} players${template.defaultRotation.isNotEmpty ? ' • Rotation set' : ''}',
+                      style: const TextStyle(color: AppColors.textMuted),
+                    ),
+                    onTap: () => Navigator.of(context).pop(template),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

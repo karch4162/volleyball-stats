@@ -1,21 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 
+import '../../core/theme/app_colors.dart';
+import '../../core/widgets/glass_container.dart';
 import 'providers.dart';
 import 'models/rally_models.dart';
 import '../match_setup/match_setup_flow.dart';
 import '../match_setup/models/match_player.dart';
-
-const _playerActionTypes = <RallyActionTypes>[
-  RallyActionTypes.serveAce,
-  RallyActionTypes.serveError,
-  RallyActionTypes.firstBallKill,
-  RallyActionTypes.attackKill,
-  RallyActionTypes.attackError,
-  RallyActionTypes.block,
-  RallyActionTypes.dig,
-  RallyActionTypes.assist,
-];
+import '../export/export_screen.dart';
 
 class RallyCaptureScreen extends ConsumerWidget {
   const RallyCaptureScreen({
@@ -30,33 +23,212 @@ class RallyCaptureScreen extends ConsumerWidget {
     final asyncState = ref.watch(rallyCaptureStateProvider(matchId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Rally Capture'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            tooltip: 'Edit Match Setup',
-            onPressed: () async {
+      backgroundColor: AppColors.background,
+      body: Column(
+        children: [
+          _CustomAppBar(
+            matchId: matchId,
+            onEdit: () async {
               await Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => MatchSetupFlow(matchId: matchId),
                 ),
               );
-              if (!context.mounted) {
-                return;
-              }
+              if (!context.mounted) return;
               ref.invalidate(rallyCaptureStateProvider(matchId));
             },
+            onExport: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const ExportScreen(),
+                ),
+              );
+            },
+            onPlayerStats: () async {
+              await _showPlayerStatsDialog(context, ref, matchId);
+            },
           ),
-        ],
-      ),
-      body: asyncState.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+          Expanded(
+            child: asyncState.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.indigo),
+        ),
         error: (error, stackTrace) => _ErrorState(
           error: error,
           onRetry: () => ref.refresh(rallyCaptureStateProvider(matchId)),
         ),
-        data: (state) => _RallyCaptureBody(state: state, matchId: matchId),
+              data: (state) => _RallyCaptureBody(state: state, matchId: matchId),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: _BottomNavigationBar(),
+    );
+  }
+
+  static Future<void> _showPlayerStatsDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String matchId,
+  ) async {
+    final playerStats = ref.read(playerStatsProvider(matchId));
+    
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Player Statistics'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: playerStats.length,
+            itemBuilder: (context, index) {
+              final stats = playerStats[index];
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '#${stats.player.jerseyNumber} ${stats.player.name}',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 8,
+                        children: [
+                          _StatChip('K', stats.attackKills),
+                          _StatChip('E', stats.attackErrors),
+                          _StatChip('A', stats.attackAttempts),
+                          _StatChip('B', stats.blocks),
+                          _StatChip('D', stats.digs),
+                          _StatChip('Asst', stats.assists),
+                          _StatChip('SA', stats.serveAces),
+                          _StatChip('SE', stats.serveErrors),
+                          _StatChip('FBK', stats.fbk),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  const _StatChip(this.label, this.value);
+
+  final String label;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      label: Text('$label: $value'),
+      labelStyle: Theme.of(context).textTheme.bodySmall,
+    );
+  }
+}
+
+class _CustomAppBar extends StatelessWidget {
+  const _CustomAppBar({
+    required this.matchId,
+    required this.onEdit,
+    required this.onExport,
+    required this.onPlayerStats,
+  });
+
+  final String matchId;
+  final VoidCallback onEdit;
+  final VoidCallback onExport;
+  final VoidCallback onPlayerStats;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassContainer(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: EdgeInsets.zero,
+      borderRadius: BorderRadius.zero,
+      child: SafeArea(
+        bottom: false,
+        child: Row(
+          children: [
+            const Text(
+              'RC',
+              style: TextStyle(
+                color: AppColors.indigo,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.5,
+              ),
+            ),
+            Container(
+              width: 1,
+              height: 16,
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              color: AppColors.textDivider,
+            ),
+            const Text(
+              'Rally Capture',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const Spacer(),
+            IconButton(
+              icon: const Icon(Icons.edit_rounded, size: 20),
+              color: AppColors.textTertiary,
+              onPressed: onEdit,
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                hoverColor: AppColors.hoverOverlay,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.download_rounded, size: 20),
+              color: AppColors.textTertiary,
+              onPressed: onExport,
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                hoverColor: AppColors.hoverOverlay,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.people_rounded, size: 20),
+              color: AppColors.textTertiary,
+              onPressed: onPlayerStats,
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                hoverColor: AppColors.hoverOverlay,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -76,24 +248,47 @@ class _RallyCaptureBody extends ConsumerWidget {
     final session = ref.watch(rallyCaptureSessionProvider(matchId));
     final sessionController =
         ref.read(rallyCaptureSessionProvider(matchId).notifier);
+    final totals = ref.watch(runningTotalsProvider(matchId));
+    final playerStats = ref.watch(playerStatsProvider(matchId));
 
-    Future<void> onPlayerActionSelected(RallyActionTypes type) async {
-      final player = await _showPlayerPicker(
-        context,
-        players: state.activePlayers,
-        title: type.label,
-      );
-      if (player == null) {
-        return;
-      }
+    Future<void> onQuickPlayerAction(MatchPlayer player, RallyActionTypes type) async {
+      HapticFeedback.lightImpact();
       sessionController.logAction(type, player: player);
+      
+      if (type == RallyActionTypes.firstBallKill) {
+        await sessionController.completeRallyWithWin(player: player, actionType: type);
+        _showSnackBar(context, 'FBK by #${player.jerseyNumber}!');
+      }
+    }
+
+    Future<void> onPoint() async {
+      HapticFeedback.mediumImpact();
+      final completed = await sessionController.completeRallyWithWin();
+      if (completed) {
+        _showSnackBar(context, 'Point scored!');
+      } else {
+        _showSnackBar(context, 'Add an action before completing the rally.');
+      }
+    }
+
+    Future<void> onRotate() async {
+      HapticFeedback.lightImpact();
+      // TODO: Implement rotation logic
+      _showSnackBar(context, 'Rotation feature coming soon');
+    }
+
+    void onUndo() {
+      final success = sessionController.undo();
+      if (!success) {
+        _showSnackBar(context, 'Nothing to undo.');
+      } else {
+        HapticFeedback.lightImpact();
+      }
     }
 
     Future<void> onTimeout() async {
       final selection = await _showTimeoutDialog(context);
-      if (selection == null) {
-        return;
-      }
+      if (selection == null) return;
       sessionController.logAction(
         RallyActionTypes.timeout,
         note: selection,
@@ -101,6 +296,12 @@ class _RallyCaptureBody extends ConsumerWidget {
     }
 
     Future<void> onSubstitution() async {
+      if (!totals.canSubstitute) {
+        _showSnackBar(
+            context, 'Substitution limit reached (15 per set). Cannot substitute.');
+        return;
+      }
+      
       if (state.activePlayers.isEmpty) {
         _showSnackBar(
             context, 'Assign active players before recording a substitution.');
@@ -114,10 +315,9 @@ class _RallyCaptureBody extends ConsumerWidget {
         context,
         activePlayers: state.activePlayers,
         benchPlayers: state.benchPlayers,
+        substitutionsRemaining: totals.substitutionsRemaining,
       );
-      if (selection == null) {
-        return;
-      }
+      if (selection == null) return;
       sessionController.logAction(
         RallyActionTypes.substitution,
         note:
@@ -125,201 +325,501 @@ class _RallyCaptureBody extends ConsumerWidget {
       );
     }
 
-    Future<void> onCompleteRally() async {
-      final rallyNumber = session.currentRallyNumber;
-      final completed = await sessionController.completeRally();
-      if (!completed) {
-        _showSnackBar(
-            context, 'Add at least one action before completing the rally.');
-        return;
-      }
-      _showSnackBar(context, 'Rally $rallyNumber recorded.');
-    }
-
-    void onUndo() {
-      final success = sessionController.undo();
-      if (!success) {
-        _showSnackBar(context, 'Nothing to undo.');
-      }
-    }
-
-    void onRedo() {
-      final success = sessionController.redo();
-      if (!success) {
-        _showSnackBar(context, 'Nothing to redo.');
-      }
-    }
-
     final matchInfo = [
-      if (state.draft.opponent.isNotEmpty) 'vs ${state.draft.opponent}',
+      if (state.draft.opponent.isNotEmpty) state.draft.opponent,
       if (state.draft.matchDate != null)
         MaterialLocalizations.of(context)
             .formatMediumDate(state.draft.matchDate!),
-      if (state.draft.location.isNotEmpty) state.draft.location,
     ].join(' • ');
 
-    final rotationEntries = List.generate(6, (index) {
-      final position = index + 1;
-      final player = state.rotation[position];
-      return _RotationEntry(position: position, player: player);
-    });
+    // Get top 3 players by stats (prioritize kills, then assists, then blocks)
+    final topPlayers = playerStats.take(3).toList();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth > 900;
-        final content = isWide
-            ? Row(
+    // Get recent rallies (last 4)
+    final recentRallies = session.completedRallies
+        .take(4)
+        .toList()
+        .reversed
+        .toList();
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Match Header
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: GlassAccentContainer(
+              padding: const EdgeInsets.all(16),
+              borderRadius: BorderRadius.circular(20),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _SectionCard(
-                          title: 'Rotation Tracker',
-                          child: _RotationGrid(entries: rotationEntries),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.school_rounded,
+                        size: 14,
+                        color: AppColors.textTertiary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        matchInfo.isEmpty ? 'Match' : matchInfo,
+                        style: const TextStyle(
+                          color: AppColors.textTertiary,
+                          fontSize: 12,
                         ),
-                        const SizedBox(height: 16),
-                        _SectionCard(
-                          title: 'Active Roster',
-                          child: _RosterList(players: state.activePlayers),
-                        ),
-                        const SizedBox(height: 16),
-                        _SectionCard(
-                          title: 'Bench',
-                          child: state.benchPlayers.isEmpty
-                              ? const Text('No bench players assigned.')
-                              : _RosterList(players: state.benchPlayers),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _SectionCard(
-                          title: 'Rally Timeline',
-                          child: _RallyTimeline(session: session),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Our Team',
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${totals.wins}',
+                              style: const TextStyle(
+                                color: AppColors.indigoLight,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        _SectionCard(
-                          title: 'Actions',
-                          child: _ActionPanel(
-                            actionTypes: _playerActionTypes,
-                            onAction: onPlayerActionSelected,
-                          ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
                         ),
-                        const SizedBox(height: 16),
-                        _SectionCard(
-                          title: 'Rally Controls',
-                          child: _RallyControls(
-                            canUndo: session.canUndo,
-                            canRedo: session.canRedo,
-                            canCompleteRally: session.currentEvents.isNotEmpty,
-                            onUndo: onUndo,
-                            onRedo: onRedo,
-                            onTimeout: onTimeout,
-                            onSubstitution: onSubstitution,
-                            onCompleteRally: onCompleteRally,
-                          ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      ],
-                    ),
+                        child: Column(
+                          children: [
+                            const Text(
+                              'Set',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '1',
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              state.draft.opponent.isNotEmpty
+                                  ? state.draft.opponent
+                                  : 'Opponent',
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${totals.losses}',
+                              style: const TextStyle(
+                                color: AppColors.roseLight,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
-              )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _SectionCard(
-                    title: 'Rotation Tracker',
-                    child: _RotationGrid(entries: rotationEntries),
-                  ),
-                  const SizedBox(height: 16),
-                  _SectionCard(
-                    title: 'Active Roster',
-                    child: _RosterList(players: state.activePlayers),
-                  ),
-                  const SizedBox(height: 16),
-                  _SectionCard(
-                    title: 'Bench',
-                    child: state.benchPlayers.isEmpty
-                        ? const Text('No bench players assigned.')
-                        : _RosterList(players: state.benchPlayers),
-                  ),
-                  const SizedBox(height: 16),
-                  _SectionCard(
-                    title: 'Rally Timeline',
-                    child: _RallyTimeline(session: session),
-                  ),
-                  const SizedBox(height: 16),
-                  _SectionCard(
-                    title: 'Actions',
-                    child: _ActionPanel(
-                      actionTypes: _playerActionTypes,
-                      onAction: onPlayerActionSelected,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _SectionCard(
-                    title: 'Rally Controls',
-                    child: _RallyControls(
-                      canUndo: session.canUndo,
-                      canRedo: session.canRedo,
-                      canCompleteRally: session.currentEvents.isNotEmpty,
-                      onUndo: onUndo,
-                      onRedo: onRedo,
-                      onTimeout: onTimeout,
-                      onSubstitution: onSubstitution,
-                      onCompleteRally: onCompleteRally,
-                    ),
-                  ),
-                ],
-              );
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                matchInfo.isEmpty ? 'Rally Capture' : matchInfo,
-                style: Theme.of(context).textTheme.titleMedium,
               ),
-              const SizedBox(height: 16),
-              content,
-            ],
+            ),
           ),
-        );
-      },
+
+          // Current Set Score
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: GlassLightContainer(
+              padding: const EdgeInsets.all(12),
+              borderRadius: BorderRadius.circular(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Current Set',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${totals.wins}',
+                          style: const TextStyle(
+                            color: AppColors.indigoLight,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 48,
+                    color: AppColors.textDivider,
+                  ),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Current Set',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${totals.losses}',
+                          style: const TextStyle(
+                            color: AppColors.roseLight,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Quick Actions
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _QuickActionButton(
+                    icon: Icons.add_circle_outline_rounded,
+                    label: 'Point',
+                    color: AppColors.indigo,
+                    onPressed: onPoint,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _QuickActionButton(
+                    icon: Icons.undo_rounded,
+                    label: 'Undo',
+                    color: AppColors.amber,
+                    onPressed: session.canUndo ? onUndo : null,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _QuickActionButton(
+                    icon: Icons.refresh_rounded,
+                    label: 'Rotate',
+                    color: AppColors.emerald,
+                    onPressed: onRotate,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Player Stats
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Player Stats',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        RallyCaptureScreen._showPlayerStatsDialog(
+                          context,
+                          ref,
+                          matchId,
+                        );
+                      },
+                      child: const Text(
+                        'View All',
+                        style: TextStyle(
+                          color: AppColors.indigo,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (topPlayers.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text(
+                      'No player stats yet',
+                      style: TextStyle(color: AppColors.textMuted),
+                    ),
+                  )
+                else
+                  ...topPlayers.map((stats) => _PlayerStatCard(
+                        stats: stats,
+                        onAction: onQuickPlayerAction,
+                      )),
+              ],
+            ),
+          ),
+
+          // Recent Rallies
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Recent Rallies',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {},
+                      child: const Text(
+                        'Filter',
+                        style: TextStyle(
+                          color: AppColors.indigo,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (recentRallies.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text(
+                      'No rallies yet',
+                      style: TextStyle(color: AppColors.textMuted),
+                    ),
+                  )
+                else
+                  ...recentRallies.map((rally) => _RallyItem(rally: rally)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.title,
-    required this.child,
+class _QuickActionButton extends StatelessWidget {
+  const _QuickActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onPressed,
   });
 
-  final String title;
-  final Widget child;
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    return GlassLightContainer(
+      padding: const EdgeInsets.all(12),
+      borderRadius: BorderRadius.circular(16),
+      onTap: onPressed,
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlayerStatCard extends StatelessWidget {
+  const _PlayerStatCard({
+    required this.stats,
+    required this.onAction,
+  });
+
+  final PlayerStats stats;
+  final Future<void> Function(MatchPlayer, RallyActionTypes) onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: GlassLightContainer(
+        padding: const EdgeInsets.all(12),
+        borderRadius: BorderRadius.circular(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            child,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: AppColors.indigoDark.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${stats.player.jerseyNumber}',
+                          style: const TextStyle(
+                            color: AppColors.indigoLight,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          stats.player.name,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          stats.player.position,
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    _StatBadge('K', stats.attackKills, AppColors.indigoLight),
+                    const SizedBox(width: 4),
+                    Container(width: 1, height: 12, color: AppColors.textDivider),
+                    const SizedBox(width: 4),
+                    _StatBadge('A', stats.assists, AppColors.emeraldLight),
+                    const SizedBox(width: 4),
+                    Container(width: 1, height: 12, color: AppColors.textDivider),
+                    const SizedBox(width: 4),
+                    _StatBadge('B', stats.blocks, AppColors.amberLight),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.flash_on_rounded,
+                    label: 'Kill',
+                    color: AppColors.indigo,
+                    onPressed: () => onAction(stats.player, RallyActionTypes.attackKill),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.gps_fixed_rounded,
+                    label: 'Ace',
+                    color: AppColors.emerald,
+                    onPressed: () => onAction(stats.player, RallyActionTypes.serveAce),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.shield_rounded,
+                    label: 'Block',
+                    color: AppColors.amber,
+                    onPressed: () => onAction(stats.player, RallyActionTypes.block),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.cancel_rounded,
+                    label: 'Error',
+                    color: AppColors.rose,
+                    onPressed: () => onAction(stats.player, RallyActionTypes.attackError),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -327,266 +827,303 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-class _RotationGrid extends StatelessWidget {
-  const _RotationGrid({required this.entries});
+class _StatBadge extends StatelessWidget {
+  const _StatBadge(this.label, this.value, this.color);
 
-  final List<_RotationEntry> entries;
+  final String label;
+  final int value;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: entries
-          .map(
-            (entry) => SizedBox(
-              width: 120,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '$value',
+          style: TextStyle(
+            color: color,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(width: 2),
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.textDisabled,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassContainer(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      borderRadius: BorderRadius.circular(8),
+      backgroundColor: Colors.transparent,
+      borderColor: Colors.transparent,
+      blurAmount: 0,
+      onTap: onPressed,
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textTertiary,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RallyItem extends StatelessWidget {
+  const _RallyItem({required this.rally});
+
+  final RallyRecord rally;
+
+  IconData _getActionIcon(RallyActionTypes type) {
+    switch (type) {
+      case RallyActionTypes.attackKill:
+      case RallyActionTypes.firstBallKill:
+        return Icons.flash_on_rounded;
+      case RallyActionTypes.serveAce:
+        return Icons.gps_fixed_rounded;
+      case RallyActionTypes.block:
+        return Icons.shield_rounded;
+      case RallyActionTypes.attackError:
+      case RallyActionTypes.serveError:
+        return Icons.cancel_rounded;
+      default:
+        return Icons.circle_outlined;
+    }
+  }
+
+  Color _getActionColor(RallyActionTypes type) {
+    switch (type) {
+      case RallyActionTypes.attackKill:
+      case RallyActionTypes.firstBallKill:
+        return AppColors.indigo;
+      case RallyActionTypes.serveAce:
+        return AppColors.emerald;
+      case RallyActionTypes.block:
+        return AppColors.amber;
+      case RallyActionTypes.attackError:
+      case RallyActionTypes.serveError:
+        return AppColors.rose;
+      default:
+        return AppColors.textMuted;
+    }
+  }
+
+  String _getRallyDescription() {
+    final pointEvent = rally.events.firstWhere(
+      (e) => e.type.isPointScoring || e.type.isError,
+      orElse: () => rally.events.first,
+    );
+    
+    if (pointEvent.player != null) {
+      return '${pointEvent.type.label} by ${pointEvent.player!.name}';
+    }
+    return pointEvent.type.label;
+  }
+
+  String _getRallySubtext() {
+    final pointEvent = rally.events.firstWhere(
+      (e) => e.type.isPointScoring || e.type.isError,
+      orElse: () => rally.events.first,
+    );
+    
+    final parts = <String>[];
+    if (pointEvent.type == RallyActionTypes.attackKill) {
+      parts.add('Outside attack');
+    } else if (pointEvent.type == RallyActionTypes.serveAce) {
+      parts.add('Service ace');
+    } else if (pointEvent.type == RallyActionTypes.block) {
+      parts.add('Solo block');
+    } else if (pointEvent.type.isError) {
+      parts.add('Out of bounds');
+    }
+    
+    // Calculate score at time of rally (simplified - would need proper tracking)
+    parts.add('${rally.rallyNumber}-${rally.rallyNumber}');
+    
+    return parts.join(' • ');
+  }
+
+  String _getTimeAgo() {
+    final now = DateTime.now();
+    final diff = now.difference(rally.completedAt);
+    
+    if (diff.inMinutes < 1) {
+      return 'Just now';
+    } else if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}m ago';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours}h ago';
+    } else {
+      return '${diff.inDays}d ago';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pointEvent = rally.events.firstWhere(
+      (e) => e.type.isPointScoring || e.type.isError,
+      orElse: () => rally.events.first,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: GlassLightContainer(
+        padding: const EdgeInsets.all(12),
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {},
+        child: Row(
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: _getActionColor(pointEvent.type).withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                _getActionIcon(pointEvent.type),
+                color: _getActionColor(pointEvent.type),
+                size: 14,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Pos ${entry.position}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: Colors.orange.withOpacity(0.1),
-                      border: Border.all(color: Colors.orange.shade200),
+                    _getRallyDescription(),
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
                     ),
-                    child: Text(
-                      entry.player != null
-                          ? '#${entry.player!.jerseyNumber} ${entry.player!.name}'
-                          : 'Unassigned',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _getRallySubtext(),
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12,
                     ),
                   ),
                 ],
               ),
             ),
-          )
-          .toList(),
-    );
-  }
-}
-
-class _RotationEntry {
-  _RotationEntry({required this.position, required this.player});
-
-  final int position;
-  final MatchPlayer? player;
-}
-
-class _RosterList extends StatelessWidget {
-  const _RosterList({required this.players});
-
-  final List<MatchPlayer> players;
-
-  @override
-  Widget build(BuildContext context) {
-    if (players.isEmpty) {
-      return const Text('No players assigned.');
-    }
-    return Column(
-      children: players
-          .map(
-            (player) => ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              title: Text('#${player.jerseyNumber} ${player.name}'),
-              subtitle: Text(player.position),
-            ),
-          )
-          .toList(),
-    );
-  }
-}
-
-class _ActionPanel extends StatelessWidget {
-  const _ActionPanel({
-    required this.actionTypes,
-    required this.onAction,
-  });
-
-  final List<RallyActionTypes> actionTypes;
-  final Future<void> Function(RallyActionTypes type) onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: actionTypes
-          .map(
-            (type) => FilledButton.tonal(
-              onPressed: () async => onAction(type),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                child: Text(type.label),
+            Text(
+              _getTimeAgo(),
+              style: const TextStyle(
+                color: AppColors.textDisabled,
+                fontSize: 12,
               ),
             ),
-          )
-          .toList(),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _RallyTimeline extends StatelessWidget {
-  const _RallyTimeline({required this.session});
-
-  final RallyCaptureSession session;
-
+class _BottomNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final items = <Widget>[];
-    final localizations = MaterialLocalizations.of(context);
-
-    if (session.completedRallies.isEmpty && session.currentEvents.isEmpty) {
-      return const Text(
-          'No rallies recorded yet. Use the action buttons to start logging.');
-    }
-
-    for (final record in session.completedRallies) {
-      final completedLabel = localizations.formatTimeOfDay(
-        TimeOfDay.fromDateTime(record.completedAt),
-        alwaysUse24HourFormat: false,
-      );
-      items.add(
-        _RallyTimelineTile(
-          rallyNumber: record.rallyNumber,
-          events: record.events,
-          subtitle: 'Completed $completedLabel',
-          isInProgress: false,
-        ),
-      );
-    }
-
-    if (session.currentEvents.isNotEmpty) {
-      items.add(
-        _RallyTimelineTile(
-          rallyNumber: session.currentRallyNumber,
-          events: session.currentEvents,
-          subtitle: 'In progress',
-          isInProgress: true,
-        ),
-      );
-    }
-
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const Divider(height: 16),
-      itemBuilder: (context, index) => items[index],
-    );
-  }
-}
-
-class _RallyTimelineTile extends StatelessWidget {
-  const _RallyTimelineTile({
-    required this.rallyNumber,
-    required this.events,
-    required this.subtitle,
-    required this.isInProgress,
-  });
-
-  final int rallyNumber;
-  final List<RallyEvent> events;
-  final String subtitle;
-  final bool isInProgress;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return ListTile(
-      leading: Icon(
-        isInProgress ? Icons.play_arrow : Icons.sports_volleyball,
-        color: isInProgress ? theme.colorScheme.primary : null,
-      ),
-      title: Text(
-        'Rally $rallyNumber${isInProgress ? ' (In Progress)' : ''}',
-        style: theme.textTheme.titleSmall,
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(subtitle),
-          const SizedBox(height: 8),
-          if (events.isEmpty)
-            const Text(
-              'No actions yet.',
-              style: TextStyle(fontStyle: FontStyle.italic),
-            )
-          else
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: events
-                  .map(
-                    (event) => Chip(
-                      label: Text(event.summary),
-                    ),
-                  )
-                  .toList(),
+    return GlassContainer(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      margin: EdgeInsets.zero,
+      borderRadius: BorderRadius.zero,
+      borderColor: AppColors.borderLight,
+      child: SafeArea(
+        top: false,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _NavItem(
+              icon: Icons.home_rounded,
+              label: 'Match',
+              isActive: true,
             ),
-        ],
+            _NavItem(
+              icon: Icons.bar_chart_rounded,
+              label: 'Stats',
+              isActive: false,
+            ),
+            _NavItem(
+              icon: Icons.list_rounded,
+              label: 'Roster',
+              isActive: false,
+            ),
+            _NavItem(
+              icon: Icons.settings_rounded,
+              label: 'Settings',
+              isActive: false,
+            ),
+          ],
+        ),
       ),
-      isThreeLine: true,
     );
   }
 }
 
-class _RallyControls extends StatelessWidget {
-  const _RallyControls({
-    required this.canUndo,
-    required this.canRedo,
-    required this.canCompleteRally,
-    required this.onUndo,
-    required this.onRedo,
-    required this.onTimeout,
-    required this.onSubstitution,
-    required this.onCompleteRally,
+class _NavItem extends StatelessWidget {
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.isActive,
   });
 
-  final bool canUndo;
-  final bool canRedo;
-  final bool canCompleteRally;
-  final VoidCallback onUndo;
-  final VoidCallback onRedo;
-  final Future<void> Function() onTimeout;
-  final Future<void> Function() onSubstitution;
-  final Future<void> Function() onCompleteRally;
+  final IconData icon;
+  final String label;
+  final bool isActive;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        FilledButton(
-          onPressed: canUndo ? onUndo : null,
-          child: const Text('Undo'),
+        Icon(
+          icon,
+          color: isActive ? AppColors.indigo : AppColors.textMuted,
+          size: 20,
         ),
-        FilledButton(
-          onPressed: canRedo ? onRedo : null,
-          child: const Text('Redo'),
-        ),
-        FilledButton(
-          onPressed: () async => onTimeout(),
-          child: const Text('Timeout'),
-        ),
-        FilledButton(
-          onPressed: () async => onSubstitution(),
-          child: const Text('Substitution'),
-        ),
-        FilledButton(
-          onPressed: canCompleteRally 
-              ? () async => await onCompleteRally() 
-              : null,
-          child: const Text('Complete Rally'),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: isActive ? AppColors.indigo : AppColors.textMuted,
+            fontSize: isActive ? 12 : 12,
+            fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
+          ),
         ),
       ],
     );
@@ -595,7 +1132,10 @@ class _RallyControls extends StatelessWidget {
 
 void _showSnackBar(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message)),
+    SnackBar(
+      content: Text(message),
+      backgroundColor: AppColors.glass,
+    ),
   );
 }
 
@@ -611,22 +1151,27 @@ Future<MatchPlayer?> _showPlayerPicker(
 
   return showModalBottomSheet<MatchPlayer>(
     context: context,
-    builder: (context) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            title: Text(title),
-            subtitle: const Text('Select the player involved'),
-          ),
-          ...players.map(
-            (player) => ListTile(
-              title: Text('#${player.jerseyNumber} ${player.name}'),
-              subtitle: Text(player.position),
-              onTap: () => Navigator.of(context).pop(player),
+    backgroundColor: Colors.transparent,
+    builder: (context) => GlassContainer(
+      padding: EdgeInsets.zero,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(title),
+              subtitle: const Text('Select the player involved'),
             ),
-          ),
-        ],
+            ...players.map(
+              (player) => ListTile(
+                title: Text('#${player.jerseyNumber} ${player.name}'),
+                subtitle: Text(player.position),
+                onTap: () => Navigator.of(context).pop(player),
+              ),
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -665,6 +1210,7 @@ Future<_SubstitutionSelection?> _showSubstitutionDialog(
   BuildContext context, {
   required List<MatchPlayer> activePlayers,
   required List<MatchPlayer> benchPlayers,
+  int? substitutionsRemaining,
 }) {
   return showDialog<_SubstitutionSelection>(
     context: context,
@@ -674,7 +1220,21 @@ Future<_SubstitutionSelection?> _showSubstitutionDialog(
       return StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            title: const Text('Record Substitution'),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Record Substitution'),
+                if (substitutionsRemaining != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '$substitutionsRemaining substitutions remaining',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                  ),
+                ],
+              ],
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -749,6 +1309,7 @@ class _ErrorState extends StatelessWidget {
           Text(
             'Failed to load rally capture state:\n$error',
             textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textPrimary),
           ),
           const SizedBox(height: 12),
           FilledButton(

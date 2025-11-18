@@ -1,8 +1,29 @@
 # STATUS
 
-- **Date:** 2025-11-17T22:05Z
-- **Phase:** Phase 2 – Simplified Architecture & Local Storage
-- **Summary:** Pivot to simplified architecture: removed Node.js backend complexity in favor of Flutter + Supabase direct connection. Core rally capture functionality is complete with session management, undo/redo, validation for rally completion, and dependency injection fixes. Rally data persistence and sync logic implemented with rally repository and sync repository using mock fallback. All tests passing.
-- **Completed:** Simplified architecture plan created (SIMPLIFIED-DEVELOPMENT-PLAN.md), rally data persistence with RallyRepository and RallySyncRepository, session management with validation, dependency injection fixes, comprehensive test coverage. Ready to implement local SQLite/Hive storage and remove Node.js backend.
-- **Next Up:** Remove Node.js backend directory, implement local SQLite/Hive storage for offline-first data, simplify sync logic to use Supabase directly, add local CSV/PDF export functionality.
+- **Date:** 2025-01-XX (Updated after Rally Capture UI improvements and stat tracking enhancements)
+- **Phase:** Phase 2 – Simplified Architecture & Local Storage + UI/UX Improvements + Stat Tracking
+- **Summary:** Major UI/UX overhaul of rally capture screen completed with comprehensive stat tracking. Implemented scoreboard-first layout with prominent running totals, quick-tap player action grid, and one-tap win/loss buttons. Reduced data entry from 3-4 taps to 1 tap for most actions. Added real-time stat tracking (FBK, Wins, Losses, Transition Points, Substitutions, Timeouts) and per-player statistics breakdown with attack efficiency calculations. Substitution limit tracking (15 per set) and attack attempt tracking for complete efficiency ratios. All core functionality working with improved user experience optimized for mobile use during live matches.
+- **Completed:** 
+  - Scoreboard-first rally capture UI with running totals display
+  - Quick Win/Loss rally buttons (one-tap completion)
+  - Player quick-tap action grid (eliminates player picker modals)
+  - Running totals provider (FBK, Wins, Losses, Transition Points, Substitutions, Timeouts)
+  - Per-player statistics tracking and breakdown view
+  - Current rally summary widget
+  - Compact rotation tracker
+  - Haptic feedback on actions
+  - Auto-complete rally on FBK (First Ball Kill)
+  - **Substitution limit tracking** (15 per set with remaining count display)
+  - **Substitution doesn't block rally completion** (can log subs between rallies)
+  - **Attack attempt tracking** (for complete attack efficiency calculations)
+  - **Attack efficiency calculation** (Kills - Errors) / Total Attempts
+  - **Kill percentage calculation** (Kills / Total Attempts)
+  - Updated all repositories and export services to handle new action types
+- **Next Up:** 
+  - User testing and feedback collection
+  - Match setup wizard improvements (discussion pending)
+  - Tablet/responsive layout optimizations (V2)
+  - Swipe gestures for undo/redo (Phase 2 enhancement)
+  - Local SQLite/Hive storage implementation
+  - Enhanced sync logic with Supabase
 - **Blockers:** None.

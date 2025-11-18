@@ -1,5 +1,6 @@
 import '../models/match_draft.dart';
 import '../models/match_player.dart';
+import '../models/roster_template.dart';
 import 'match_draft_cache.dart';
 import 'match_setup_repository.dart';
 
@@ -45,6 +46,39 @@ class CachedMatchSetupRepository implements MatchSetupRepository {
     await _cache.save(matchId, draft);
     final id = teamId.isEmpty ? _teamId : teamId;
     await _primary.saveDraft(teamId: id, matchId: matchId, draft: draft);
+  }
+
+  @override
+  Future<List<RosterTemplate>> loadRosterTemplates({required String teamId}) {
+    final id = teamId.isEmpty ? _teamId : teamId;
+    return _primary.loadRosterTemplates(teamId: id);
+  }
+
+  @override
+  Future<void> saveRosterTemplate({
+    required String teamId,
+    required RosterTemplate template,
+  }) {
+    final id = teamId.isEmpty ? _teamId : teamId;
+    return _primary.saveRosterTemplate(teamId: id, template: template);
+  }
+
+  @override
+  Future<void> deleteRosterTemplate({
+    required String teamId,
+    required String templateId,
+  }) {
+    final id = teamId.isEmpty ? _teamId : teamId;
+    return _primary.deleteRosterTemplate(teamId: id, templateId: templateId);
+  }
+
+  @override
+  Future<void> updateTemplateUsage({
+    required String teamId,
+    required String templateId,
+  }) {
+    final id = teamId.isEmpty ? _teamId : teamId;
+    return _primary.updateTemplateUsage(teamId: id, templateId: templateId);
   }
 }
 

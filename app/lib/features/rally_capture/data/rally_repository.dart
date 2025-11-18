@@ -193,6 +193,7 @@ class RallyRepository {
         case RallyActionTypes.serveError:
         case RallyActionTypes.attackError:
           return 'error';
+        case RallyActionTypes.attackAttempt:
         case RallyActionTypes.dig:
         case RallyActionTypes.assist:
         case RallyActionTypes.timeout:
@@ -220,6 +221,7 @@ class RallyRepository {
       case RallyActionTypes.firstBallKill:
       case RallyActionTypes.attackKill:
       case RallyActionTypes.attackError:
+      case RallyActionTypes.attackAttempt:
         return 'attack';
       case RallyActionTypes.block:
         return 'block';
@@ -244,6 +246,8 @@ class RallyRepository {
         return 'kill';
       case RallyActionTypes.attackError:
         return 'error';
+      case RallyActionTypes.attackAttempt:
+        return 'attempt';
       case RallyActionTypes.block:
         return null;
       case RallyActionTypes.dig:
@@ -266,6 +270,8 @@ class RallyRepository {
       case RallyActionTypes.serveError:
       case RallyActionTypes.attackError:
         return 'error';
+      case RallyActionTypes.attackAttempt:
+        return 'in_play';
       case RallyActionTypes.block:
         return 'block_point';
       case RallyActionTypes.dig:

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-
-import 'package:uuid/uuid.dart';
+import 'dart:math' as math;
 
 import '../rally_capture/models/rally_models.dart';
 import '../match_setup/models/match_player.dart';
@@ -136,7 +135,7 @@ class CsvExportService {
     required int rallyNumber,
     String? opponent,
     DateTime? matchDate,
-    RallyEvent event,
+    required RallyEvent event,
     MatchPlayer? player,
   }) {
     final values = [
@@ -145,7 +144,7 @@ class CsvExportService {
       '', // We'll add set number when implementing sets
       rallyNumber.toString(),
       player?.name ?? '',
-      player?.jerseyNumber?.toString() ?? '',
+      player != null ? player.jerseyNumber.toString() : '',
       event.type.label,
       _getActionSubtype(event.type),
       _determineActionOutcome(event),
@@ -153,7 +152,7 @@ class CsvExportService {
       event.note ?? '',
     ];
     
-    return values.map(_escapeCsvValue).join(',');
+    return values.map((v) => _escapeCsvValue(v.toString())).join(',');
   }
 
   String _buildPlayerStatsHeader() {
@@ -161,9 +160,12 @@ class CsvExportService {
   }
 
   String _buildPlayerStatsRow({
-    required MatchPlayer player,
+    required MatchPlayer? player,
     required Map<String, dynamic> stats,
   }) {
+    if (player == null) {
+      return '';
+    }
     final values = [
       player.name,
       player.jerseyNumber.toString(),
@@ -204,7 +206,7 @@ class CsvExportService {
       (summary['winner'] ?? 'pending'),
     ];
     
-    return values.map(_escapeCsvValue).join(',');
+    return values.map((v) => _escapeCsvValue(v.toString())).join(',');
   }
 
   String _getActionSubtype(RallyActionTypes type) {
@@ -219,14 +221,18 @@ class CsvExportService {
         return 'kill';
       case RallyActionTypes.attackError:
         return 'error';
+      case RallyActionTypes.attackAttempt:
+        return 'attempt';
       case RallyActionTypes.block:
         return 'block';
       case RallyActionTypes.dig:
         return 'dig';
       case RallyActionTypes.assist:
         return 'assist';
-      default:
-        return '';
+      case RallyActionTypes.timeout:
+        return 'timeout';
+      case RallyActionTypes.substitution:
+        return 'substitution';
     }
   }
 
@@ -239,6 +245,8 @@ class CsvExportService {
       case RallyActionTypes.serveError:
       case RallyActionTypes.attackError:
         return 'error';
+      case RallyActionTypes.attackAttempt:
+        return 'in_play';
       case RallyActionTypes.block:
         return 'block_point';
       default:
@@ -314,6 +322,10 @@ class CsvExportService {
             stats['attacks_errors'] = (stats['attacks_errors'] ?? 0) + 1;
             break;
             
+          case RallyActionTypes.attackAttempt:
+            stats['attacks_total'] = (stats['attacks_total'] ?? 0) + 1;
+            break;
+            
           case RallyActionTypes.block:
             stats['blocks_total'] = (stats['blocks_total'] ?? 0) + 1;
             stats['blocks_blocks'] = (stats['blocks_blocks'] ?? 0) + 1;
@@ -326,6 +338,11 @@ class CsvExportService {
             
           case RallyActionTypes.assist:
             stats['assists_total'] = (stats['assists_total'] ?? 0) + 1;
+            break;
+            
+          case RallyActionTypes.timeout:
+          case RallyActionTypes.substitution:
+            // These don't affect player stats
             break;
         }
       }
@@ -346,13 +363,13 @@ class CsvExportService {
           _isPointScoringAction(e.type)
       ).length;
       
-      final theirPoints = rally.events.where((e) =>
+      int theirPoints = rally.events.where((e) =>
           _isErrorAction(e.type)
       ).length;
       
       if (ourPoints > 0) {
         pointsFor += ourPoints;
-        theirPoints = Math.min(theirPoints, 1); // Only count 1 error per rally
+        theirPoints = math.min(theirPoints, 1); // Only count 1 error per rally
       } else {
         pointsAgainst += theirPoints;
       }

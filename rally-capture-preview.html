@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rally Capture Screen Preview</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+            color: #1f1f1f;
+            line-height: 1.5;
+        }
+
+        /* App Bar */
+        .app-bar {
+            background-color: #6750a4;
+            color: white;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .app-bar-title {
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .app-bar-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .icon-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Match Header */
+        .match-header {
+            background-color: #e8def8;
+            padding: 16px;
+        }
+
+        .match-info {
+            font-size: 14px;
+            color: #49454f;
+            margin-bottom: 8px;
+        }
+
+        .match-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .set-label {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1f1f1f;
+        }
+
+        .score {
+            font-size: 28px;
+            font-weight: 700;
+            color: #6750a4;
+        }
+
+        /* Running Totals Bar */
+        .running-totals {
+            background-color: #e6e1e5;
+            padding: 12px 16px;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 8px;
+        }
+
+        .stats-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .stat-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #49454f;
+        }
+
+        .stat-fbk { color: #2196f3; }
+        .stat-wins { color: #4caf50; }
+        .stat-losses { color: #f44336; }
+        .stat-transition { color: #ff9800; }
+        .stat-subs { color: #9c27b0; }
+        .stat-timeouts { color: #009688; }
+        .stat-subs-disabled { color: #9e9e9e; }
+
+        /* Quick Action Buttons */
+        .quick-actions {
+            padding: 16px;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .button-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .filled-button {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            border-radius: 24px;
+            font-size: 16px;
+            font-weight: 500;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: opacity 0.2s;
+        }
+
+        .filled-button:hover {
+            opacity: 0.9;
+        }
+
+        .filled-button:active {
+            opacity: 0.8;
+        }
+
+        .button-green { background-color: #4caf50; }
+        .button-red { background-color: #f44336; }
+        .button-blue { background-color: #2196f3; }
+        .button-full-width {
+            width: 100%;
+            flex: none;
+        }
+
+        /* Card */
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin: 0 16px 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+
+        .card-primary {
+            background-color: #e8def8;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 12px;
+            color: #1f1f1f;
+        }
+
+        /* Current Rally Summary */
+        .rally-summary {
+            margin: 0 16px 16px;
+        }
+
+        .rally-number {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .chips-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .chip {
+            background-color: rgba(103, 80, 164, 0.12);
+            color: #6750a4;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+        }
+
+        /* Player Action Grid */
+        .player-section {
+            margin-bottom: 12px;
+        }
+
+        .player-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .player-name {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #1f1f1f;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .action-button {
+            min-width: 48px;
+            height: 48px;
+            padding: 8px;
+            border: none;
+            border-radius: 24px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .action-button:hover {
+            opacity: 0.9;
+        }
+
+        .action-button-tonal {
+            background-color: #e8def8;
+            color: #6750a4;
+        }
+
+        .action-button-filled {
+            background-color: #2196f3;
+            color: white;
+        }
+
+        /* Rotation Tracker */
+        .rotation-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .rotation-position {
+            padding: 8px 12px;
+            border-radius: 8px;
+            background-color: #f5f5f5;
+            border: 1px solid rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .position-label {
+            font-size: 12px;
+            color: #49454f;
+            margin-bottom: 4px;
+        }
+
+        .position-number {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1f1f1f;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .control-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: opacity 0.2s;
+        }
+
+        .control-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .control-icon-button {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            border-radius: 50%;
+            background-color: transparent;
+            color: #6750a4;
+        }
+
+        .control-icon-button:hover:not(:disabled) {
+            background-color: rgba(103, 80, 164, 0.1);
+        }
+
+        .control-filled-button {
+            background-color: #6750a4;
+            color: white;
+        }
+
+        .control-filled-button:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+
+        .control-filled-button-disabled {
+            background-color: #9e9e9e;
+            color: white;
+        }
+
+        /* Material Icons */
+        .material-icons {
+            font-size: 24px;
+        }
+
+        .material-icons.small {
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- App Bar -->
+    <div class="app-bar">
+        <div class="app-bar-title">Rally Capture</div>
+        <div class="app-bar-actions">
+            <button class="icon-button" title="Edit Match Setup">
+                <span class="material-icons">edit</span>
+            </button>
+            <button class="icon-button" title="Export Data">
+                <span class="material-icons">download</span>
+            </button>
+            <button class="icon-button" title="Player Stats">
+                <span class="material-icons">people</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Match Header -->
+    <div class="match-header">
+        <div class="match-info">Lincoln High School • Dec 15, 2024</div>
+        <div class="match-header-row">
+            <div class="set-label">Set 1</div>
+            <div class="score">12 - 8</div>
+        </div>
+    </div>
+
+    <!-- Running Totals Bar -->
+    <div class="running-totals">
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value stat-fbk">3</div>
+                <div class="stat-label">FBK</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-wins">12</div>
+                <div class="stat-label">Wins</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-losses">8</div>
+                <div class="stat-label">Losses</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-transition">5</div>
+                <div class="stat-label">Transition</div>
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value stat-subs">12</div>
+                <div class="stat-label">Subs Remaining</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-timeouts">1</div>
+                <div class="stat-label">Timeouts</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Action Buttons -->
+    <div class="quick-actions">
+        <div class="button-row">
+            <button class="filled-button button-green">
+                <span class="material-icons">check_circle</span>
+                WIN RALLY
+            </button>
+            <button class="filled-button button-red">
+                <span class="material-icons">cancel</span>
+                LOSE RALLY
+            </button>
+        </div>
+        <div class="button-row">
+            <button class="filled-button button-blue button-full-width">
+                <span class="material-icons">flash_on</span>
+                FIRST BALL KILL
+            </button>
+        </div>
+    </div>
+
+    <!-- Current Rally Summary -->
+    <div class="card card-primary rally-summary">
+        <div class="rally-number">Rally #13</div>
+        <div class="chips-container">
+            <div class="chip">#7 Attack Kill</div>
+            <div class="chip">#12 Assist</div>
+        </div>
+        <button class="filled-button button-blue button-full-width" style="margin-top: 8px;">
+            Complete Rally
+        </button>
+    </div>
+
+    <!-- Player Quick-Tap Grid -->
+    <div class="card">
+        <div class="card-title">Quick Actions</div>
+        <div class="player-section">
+            <div class="player-name">#7 Sarah Johnson</div>
+            <div class="action-buttons">
+                <button class="action-button action-button-tonal">K</button>
+                <button class="action-button action-button-tonal">E</button>
+                <button class="action-button action-button-tonal">A</button>
+                <button class="action-button action-button-tonal">B</button>
+                <button class="action-button action-button-tonal">D</button>
+                <button class="action-button action-button-tonal">Asst</button>
+                <button class="action-button action-button-tonal">SA</button>
+                <button class="action-button action-button-tonal">SE</button>
+                <button class="action-button action-button-filled">FBK</button>
+            </div>
+        </div>
+        <div class="player-section">
+            <div class="player-name">#12 Emma Martinez</div>
+            <div class="action-buttons">
+                <button class="action-button action-button-tonal">K</button>
+                <button class="action-button action-button-tonal">E</button>
+                <button class="action-button action-button-tonal">A</button>
+                <button class="action-button action-button-tonal">B</button>
+                <button class="action-button action-button-tonal">D</button>
+                <button class="action-button action-button-tonal">Asst</button>
+                <button class="action-button action-button-tonal">SA</button>
+                <button class="action-button action-button-tonal">SE</button>
+                <button class="action-button action-button-filled">FBK</button>
+            </div>
+        </div>
+        <div class="player-section">
+            <div class="player-name">#5 Mia Chen</div>
+            <div class="action-buttons">
+                <button class="action-button action-button-tonal">K</button>
+                <button class="action-button action-button-tonal">E</button>
+                <button class="action-button action-button-tonal">A</button>
+                <button class="action-button action-button-tonal">B</button>
+                <button class="action-button action-button-tonal">D</button>
+                <button class="action-button action-button-tonal">Asst</button>
+                <button class="action-button action-button-tonal">SA</button>
+                <button class="action-button action-button-tonal">SE</button>
+                <button class="action-button action-button-filled">FBK</button>
+            </div>
+        </div>
+        <div class="player-section">
+            <div class="player-name">#9 Olivia Brown</div>
+            <div class="action-buttons">
+                <button class="action-button action-button-tonal">K</button>
+                <button class="action-button action-button-tonal">E</button>
+                <button class="action-button action-button-tonal">A</button>
+                <button class="action-button action-button-tonal">B</button>
+                <button class="action-button action-button-tonal">D</button>
+                <button class="action-button action-button-tonal">Asst</button>
+                <button class="action-button action-button-tonal">SA</button>
+                <button class="action-button action-button-tonal">SE</button>
+                <button class="action-button action-button-filled">FBK</button>
+            </div>
+        </div>
+        <div class="player-section">
+            <div class="player-name">#3 Ava Williams</div>
+            <div class="action-buttons">
+                <button class="action-button action-button-tonal">K</button>
+                <button class="action-button action-button-tonal">E</button>
+                <button class="action-button action-button-tonal">A</button>
+                <button class="action-button action-button-tonal">B</button>
+                <button class="action-button action-button-tonal">D</button>
+                <button class="action-button action-button-tonal">Asst</button>
+                <button class="action-button action-button-tonal">SA</button>
+                <button class="action-button action-button-tonal">SE</button>
+                <button class="action-button action-button-filled">FBK</button>
+            </div>
+        </div>
+        <div class="player-section">
+            <div class="player-name">#11 Sophia Davis</div>
+            <div class="action-buttons">
+                <button class="action-button action-button-tonal">K</button>
+                <button class="action-button action-button-tonal">E</button>
+                <button class="action-button action-button-tonal">A</button>
+                <button class="action-button action-button-tonal">B</button>
+                <button class="action-button action-button-tonal">D</button>
+                <button class="action-button action-button-tonal">Asst</button>
+                <button class="action-button action-button-tonal">SA</button>
+                <button class="action-button action-button-tonal">SE</button>
+                <button class="action-button action-button-filled">FBK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rotation & Controls -->
+    <div class="card">
+        <div class="card-title">Rotation</div>
+        <div class="rotation-container">
+            <div class="rotation-position">
+                <div class="position-label">Pos 1</div>
+                <div class="position-number">#7</div>
+            </div>
+            <div class="rotation-position">
+                <div class="position-label">Pos 2</div>
+                <div class="position-number">#12</div>
+            </div>
+            <div class="rotation-position">
+                <div class="position-label">Pos 3</div>
+                <div class="position-number">#5</div>
+            </div>
+            <div class="rotation-position">
+                <div class="position-label">Pos 4</div>
+                <div class="position-number">#9</div>
+            </div>
+            <div class="rotation-position">
+                <div class="position-label">Pos 5</div>
+                <div class="position-number">#3</div>
+            </div>
+            <div class="rotation-position">
+                <div class="position-label">Pos 6</div>
+                <div class="position-number">#11</div>
+            </div>
+        </div>
+        <div class="controls" style="margin-top: 16px;">
+            <button class="control-button control-icon-button" title="Undo">
+                <span class="material-icons">undo</span>
+            </button>
+            <button class="control-button control-icon-button" title="Redo" disabled>
+                <span class="material-icons">redo</span>
+            </button>
+            <button class="control-button control-filled-button">
+                <span class="material-icons small">timer</span>
+                Timeout
+            </button>
+            <button class="control-button control-filled-button">
+                <span class="material-icons small">swap_horiz</span>
+                Sub (12)
+            </button>
+        </div>
+    </div>
+</body>
+</html>

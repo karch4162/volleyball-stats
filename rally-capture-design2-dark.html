@@ -1,0 +1,228 @@
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rally Capture</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+        }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-light {
+            background: rgba(51, 65, 85, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-accent {
+            background: rgba(99, 102, 241, 0.15);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }</style>
+</head>
+<body class="bg-slate-900 min-h-screen">
+    <div class="max-w-md mx-auto bg-slate-900 min-h-screen shadow-lg">
+        <!-- App Bar -->
+        <div class="glass sticky top-0 z-50 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="text-indigo-400 font-semibold text-lg tracking-tight">RC</div>
+                <div class="h-4 w-px bg-slate-600"></div>
+                <div class="text-slate-100 font-medium text-base">Rally Capture</div>
+            </div>
+            <div class="flex items-center gap-1">
+                <button class="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                    <i data-lucide="edit-3" class="w-5 h-5 text-slate-300"></i>
+                </button>
+                <button class="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                    <i data-lucide="download" class="w-5 h-5 text-slate-300"></i>
+                </button>
+                <button class="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                    <i data-lucide="users" class="w-5 h-5 text-slate-300"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Match Header -->
+        <div class="glass-accent mx-4 mt-4 rounded-2xl p-4">
+            <div class="flex items-center gap-2 text-xs text-slate-300 mb-3">
+                <i data-lucide="school" class="w-3.5 h-3.5"></i>
+                <span>Lincoln High School</span>
+                <span class-500"="">•</span>
+                <span>March 15, 2024</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <div class="flex-1">
+                    <div class="text-slate-100 font-semibold text-lg">Lincoln</div>
+                    <div class="text-indigo-300 text-2xl font-bold mt-1">2</div>
+                </div>
+                <div class="px-3 py-1 bg-slate-700/50 rounded-lg">
+                    <div class="text-slate-400 text-xs">Set</div>
+                    <div class="text-slate-100 font-semibold text-center">3</div>
+                </div>
+                <div class="flex-1 text-right">
+                    <div class="text-slate-100 font-semibold text-lg">Warriors</div>
+                    <div class="text-rose-300 text-2xl font-bold mt-1">1</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Set Score -->
+        <div class="glass-light mx-4 mt-3 rounded-xl p-3 flex items-center justify-between">
+            <div class="text-center flex-1">
+                <div class="text-slate-400 text-xs mb-1">Current Set</div>
+                <div class="text-indigo-300 text-3xl font-bold">21</div>
+            </div>
+            <div class="h-12 w-px bg-slate-600"></div>
+            <div class="text-center flex-1">
+                <div class="text-slate-400 text-xs mb-1">Current Set</div>
+                <div class="text-rose-300 text-3xl font-bold">19</div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="px-4 mt-4">
+            <div class="flex gap-2">
+                <button class="flex-1 glass-light rounded-xl p-3 hover:bg-slate-700/60 transition-all active:scale-95">
+                    <i data-lucide="plus-circle" class="w-5 h-5 text-indigo-400 mx-auto mb-1"></i>
+                    <div class="text-slate-200 text-xs font-medium">Point</div>
+                </button>
+                <button class="flex-1 glass-light rounded-xl p-3 hover:bg-slate-700/60 transition-all active:scale-95">
+                    <i data-lucide="rotate-ccw" class="w-5 h-5 text-amber-400 mx-auto mb-1"></i>
+                    <div class="text-slate-200 text-xs font-medium">Undo</div>
+                </button>
+                <button class="flex-1 glass-light rounded-xl p-3 hover:bg-slate-700/60 transition-all active:scale-95">
+                    <i data-lucide="refresh-cw" class="w-5 h-5 text-emerald-400 mx-auto mb-1"></i>
+                    <div class="text-slate-200 text-xs font-medium">Rotate</div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Tracking -->
+        <div class="px-4 mt-5">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-slate-100 font-semibold text-sm">Player Stats</h2>
+                <button class="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">View All</button>
+            </div>
+            
+            <!-- Player Stat Cards -->
+            <div class="space-y-2">
+                <!-- Player 1 -->
+                <div class="glass-light rounded-xl p-3"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="w-8 h-8 bg-indigo-500/20 rounded-full flex items-center justify-center"><span class="text-indigo-300 text-xs font-semibold">12</span></div><div><div class="text-slate-100 text-sm font-medium">Sarah Johnson</div><div class="text-slate-400 text-xs">Outside Hitter</div></div></div><div class="flex items-center gap-1"><div class="text-indigo-300 text-sm font-semibold">8</div><div class="text-slate-500 text-xs">K</div><div class="w-px h-3 bg-slate-600 mx-1"></div><div class="text-emerald-300 text-sm font-semibold">3</div><div class="text-slate-500 text-xs">A</div><div class="w-px h-3 bg-slate-600 mx-1"></div><div class="text-amber-300 text-sm font-semibold">5</div><div class="text-slate-500 text-xs">B</div></div></div><div class="grid grid-cols-4 gap-2"><button class="glass rounded-lg p-2 hover:bg-indigo-500/20 transition-all active:scale-95 flex flex-col items-center gap-1"><i data-lucide="zap" class="w-4 h-4 text-indigo-400"></i><span class="text-slate-300 text-xs font-medium">Kill</span></button><button class="glass rounded-lg p-2 hover:bg-emerald-500/20 transition-all active:scale-95 flex flex-col items-center gap-1"><i data-lucide="target" class="w-4 h-4 text-emerald-400"></i><span class="text-slate-300 text-xs font-medium">Ace</span></button><button class="glass rounded-lg p-2 hover:bg-amber-500/20 transition-all active:scale-95 flex flex-col items-center gap-1"><i data-lucide="shield" class="w-4 h-4 text-amber-400"></i><span class="text-slate-300 text-xs font-medium">Block</span></button><button class="glass rounded-lg p-2 hover:bg-rose-500/20 transition-all active:scale-95 flex flex-col items-center gap-1"><i data-lucide="x-circle" class="w-4 h-4 text-rose-400"></i><span class="text-slate-300 text-xs font-medium">Error</span></button></div></div>
+
+                <!-- Player 2 -->
+                <div class="glass-light rounded-xl p-3"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="w-8 h-8 bg-indigo-500/20 rounded-full flex items-center justify-center"><span class="text-indigo-300 text-xs font-semibold">7</span></div><div><div class="text-slate-100 text-sm font-medium">Emma Davis</div><div class="text-slate-400 text-xs">Setter</div></div></div><div class="flex items-center gap-1"><div class="text-indigo-300 text-sm font-semibold">2</div><div class="text-slate-500 text-xs">K</div><div class="w-px h-3 bg-slate-600 mx-1"></div><div class="text-emerald-300 text-sm font-semibold">1</div><div class="text-slate-500 text-xs">A</div><div class="w-px h-3 bg-slate-600 mx-1"></div><div class="text-purple-300 text-sm font-semibold">18</div><div class="text-slate-500 text-xs">AS</div></div></div><div class="grid grid-cols-4 gap-2"><button class="glass rounded-lg p-2 hover:bg-indigo-500/20 transition-all active:scale-95 flex flex-col items-center gap-1"><i data-lucide="zap" class="w-4 h-4 text-indigo-400"></i><span class="text-slate-300 text-xs font-medium">Kill</span></button><button class="glass rounded-lg p-2 hover:bg-emerald-500/20 transition-all active:scale-95 flex flex-col items-center gap-1"><i data-lucide="target" class="w-4 h-4 text-emerald-400"></i><span class="text-slate-300 text-xs font-medium">Ace</span></button><button class="glass rounded-lg p-2 hover:bg-purple-500/20 transition-all active:scale-95 flex flex-col items-center gap-1"><i data-lucide="hand" class="w-4 h-4 text-purple-400"></i><span class="text-slate-300 text-xs font-medium">Assist</span></button><button class="glass rounded-lg p-2 hover:bg-rose-500/20 transition-all active:scale-95 flex flex-col items-center gap-1"><i data-lucide="x-circle" class="w-4 h-4 text-rose-400"></i><span class="text-slate-300 text-xs font-medium">Error</span></button></div></div>
+
+                <!-- Player 3 -->
+                <div class="glass-light rounded-xl p-3"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="w-8 h-8 bg-indigo-500/20 rounded-full flex items-center justify-center"><span class="text-indigo-300 text-xs font-semibold">4</span></div><div><div class="text-slate-100 text-sm font-medium">Maya Patel</div><div class="text-slate-400 text-xs">Middle Blocker</div></div></div><div class="flex items-center gap-1"><div class="text-indigo-300 text-sm font-semibold">6</div><div class="text-slate-500 text-xs">K</div><div class="w-px h-3 bg-slate-600 mx-1"></div><div class="text-amber-300 text-sm font-semibold">7</div><div class="text-slate-500 text-xs">B</div><div class="w-px h-3 bg-slate-600 mx-1"></div><div class="text-rose-300 text-sm font-semibold">3</div><div class="text-slate-500 text-xs">E</div></div></div><div class="grid grid-cols-4 gap-2"><button class="glass rounded-lg p-2 hover:bg-indigo-500/20 transition-all active:scale-95 flex flex-col items-center gap-1"><i data-lucide="zap" class="w-4 h-4 text-indigo-400"></i><span class="text-slate-300 text-xs font-medium">Kill</span></button><button class="glass rounded-lg p-2 hover:bg-emerald-500/20 transition-all active:scale-95 flex flex-col items-center gap-1"><i data-lucide="target" class="w-4 h-4 text-emerald-400"></i><span class="text-slate-300 text-xs font-medium">Ace</span></button><button class="glass rounded-lg p-2 hover:bg-amber-500/20 transition-all active:scale-95 flex flex-col items-center gap-1"><i data-lucide="shield" class="w-4 h-4 text-amber-400"></i><span class="text-slate-300 text-xs font-medium">Block</span></button><button class="glass rounded-lg p-2 hover:bg-rose-500/20 transition-all active:scale-95 flex flex-col items-center gap-1"><i data-lucide="x-circle" class="w-4 h-4 text-rose-400"></i><span class="text-slate-300 text-xs font-medium">Error</span></button></div></div>
+            </div>
+        </div>
+
+        <!-- Rally Timeline -->
+        <div class="px-4 mt-5 pb-24">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-slate-100 font-semibold text-sm">Recent Rallies</h2>
+                <button class="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">Filter</button>
+            </div>
+            
+            <div class="space-y-2">
+                <!-- Rally Item 1 -->
+                <div class="glass-light rounded-xl p-3 hover:bg-slate-700/60 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-6 h-6 bg-indigo-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <i data-lucide="zap" class="w-3.5 h-3.5 text-indigo-400"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-slate-100 text-sm font-medium mb-1">Kill by Sarah Johnson</div>
+                                <div class="text-slate-400 text-xs">Outside attack • 21-19</div>
+                            </div>
+                        </div>
+                        <div class="text-slate-500 text-xs">2m ago</div>
+                    </div>
+                </div>
+
+                <!-- Rally Item 2 -->
+                <div class="glass-light rounded-xl p-3 hover:bg-slate-700/60 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <i data-lucide="target" class="w-3.5 h-3.5 text-emerald-400"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-slate-100 text-sm font-medium mb-1">Ace by Sarah Johnson</div>
+                                <div class="text-slate-400 text-xs">Service ace • 20-19</div>
+                            </div>
+                        </div>
+                        <div class="text-slate-500 text-xs">3m ago</div>
+                    </div>
+                </div>
+
+                <!-- Rally Item 3 -->
+                <div class="glass-light rounded-xl p-3 hover:bg-slate-700/60 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <i data-lucide="shield" class="w-3.5 h-3.5 text-amber-400"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-slate-100 text-sm font-medium mb-1">Block by Maya Patel</div>
+                                <div class="text-slate-400 text-xs">Solo block • 19-19</div>
+                            </div>
+                        </div>
+                        <div class="text-slate-500 text-xs">5m ago</div>
+                    </div>
+                </div>
+
+                <!-- Rally Item 4 -->
+                <div class="glass-light rounded-xl p-3 hover:bg-slate-700/60 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <i data-lucide="x-circle" class="w-3.5 h-3.5 text-rose-400"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-slate-100 text-sm font-medium mb-1">Attack error</div>
+                                <div class="text-slate-400 text-xs">Out of bounds • 18-19</div>
+                            </div>
+                        </div>
+                        <div class="text-slate-500 text-xs">7m ago</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass border-t border-white/10">
+            <div class="flex items-center justify-around py-2 px-4">
+                <button class="flex flex-col items-center gap-1 py-2 px-4 text-indigo-400 transition-colors">
+                    <i data-lucide="home" class="w-5 h-5"></i>
+                    <span class="text-xs font-medium">Match</span>
+                </button>
+                <button class="flex flex-col items-center gap-1 py-2 px-4 text-slate-400 hover:text-slate-200 transition-colors">
+                    <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                    <span class="text-xs">Stats</span>
+                </button>
+                <button class="flex flex-col items-center gap-1 py-2 px-4 text-slate-400 hover:text-slate-200 transition-colors">
+                    <i data-lucide="list" class="w-5 h-5"></i>
+                    <span class="text-xs">Roster</span>
+                </button>
+                <button class="flex flex-col items-center gap-1 py-2 px-4 text-slate-400 hover:text-slate-200 transition-colors">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                    <span class="text-xs">Settings</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
+
+</body></html>

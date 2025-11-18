@@ -6,6 +6,7 @@ enum RallyActionTypes {
   firstBallKill,
   attackKill,
   attackError,
+  attackAttempt,
   block,
   dig,
   assist,
@@ -26,6 +27,8 @@ extension RallyActionTypesX on RallyActionTypes {
         return 'Attack Kill';
       case RallyActionTypes.attackError:
         return 'Attack Error';
+      case RallyActionTypes.attackAttempt:
+        return 'Attack Attempt';
       case RallyActionTypes.block:
         return 'Block';
       case RallyActionTypes.dig:
@@ -46,6 +49,7 @@ extension RallyActionTypesX on RallyActionTypes {
       case RallyActionTypes.firstBallKill:
       case RallyActionTypes.attackKill:
       case RallyActionTypes.attackError:
+      case RallyActionTypes.attackAttempt:
       case RallyActionTypes.block:
       case RallyActionTypes.dig:
       case RallyActionTypes.assist:
@@ -65,6 +69,7 @@ extension RallyActionTypesX on RallyActionTypes {
         return true;
       case RallyActionTypes.serveError:
       case RallyActionTypes.attackError:
+      case RallyActionTypes.attackAttempt:
       case RallyActionTypes.dig:
       case RallyActionTypes.assist:
       case RallyActionTypes.timeout:
@@ -81,6 +86,7 @@ extension RallyActionTypesX on RallyActionTypes {
       case RallyActionTypes.serveAce:
       case RallyActionTypes.firstBallKill:
       case RallyActionTypes.attackKill:
+      case RallyActionTypes.attackAttempt:
       case RallyActionTypes.block:
       case RallyActionTypes.dig:
       case RallyActionTypes.assist:
@@ -201,9 +207,23 @@ class RallyCaptureSession {
   bool get hasCurrentEvents => currentEvents.isNotEmpty;
   
   bool get canCompleteRally {
-    return currentEvents.isNotEmpty && 
-           currentEvents.any((event) => 
-               event.type.isPointScoring || event.type.isError);
+    // Allow completion if there are any events, OR if there are only substitutions/timeouts
+    // (substitutions/timeouts often happen between rallies and shouldn't block completion)
+    if (currentEvents.isEmpty) {
+      return false;
+    }
+    
+    // Check if we have any point-scoring actions or errors
+    final hasRallyActions = currentEvents.any((event) => 
+        event.type.isPointScoring || event.type.isError);
+    
+    // If we only have substitutions/timeouts, still allow completion
+    // (they happen between rallies and don't require a rally outcome)
+    final onlySubsOrTimeouts = currentEvents.every((event) => 
+        event.type == RallyActionTypes.substitution || 
+        event.type == RallyActionTypes.timeout);
+    
+    return hasRallyActions || onlySubsOrTimeouts;
   }
 
   RallyCaptureSession copyWith({

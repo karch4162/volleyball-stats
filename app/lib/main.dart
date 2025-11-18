@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/supabase.dart';
+import 'core/theme/app_theme.dart';
 import 'features/match_setup/data/match_draft_cache.dart';
-import 'features/match_setup/match_setup_flow.dart';
+import 'features/match_setup/match_setup_landing_screen.dart';
 import 'features/match_setup/providers.dart';
 
 Future<void> main() async {
@@ -27,19 +28,8 @@ class VolleyballStatsApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Volleyball Stats',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        scaffoldBackgroundColor: Colors.white,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-        ),
-        textTheme: const TextTheme(
-          bodyLarge: TextStyle(color: Colors.black),
-        ),
-        useMaterial3: true,
-      ),
-      home: const MatchSetupFlow(),
+      theme: AppTheme.darkTheme,
+      home: const MatchSetupLandingScreen(),
     );
   }
 }

@@ -333,4 +333,401 @@ class RallyCaptureSessionController extends StateNotifier<RallyCaptureSession> {
     // the actual roster to find the player by jersey number
     return null; // Return null for now since we don't have roster access
   }
+
+  // Quick action: Complete rally with win
+  Future<bool> completeRallyWithWin({MatchPlayer? player, RallyActionTypes? actionType}) async {
+    // If we have events, just complete. Otherwise, add a win action first.
+    if (state.currentEvents.isEmpty) {
+      if (player != null && actionType != null) {
+        logAction(actionType, player: player);
+      } else {
+        // Default to a generic attack kill for win (no player specified)
+        logAction(RallyActionTypes.attackKill);
+      }
+    }
+    return await completeRally();
+  }
+
+  // Quick action: Complete rally with loss
+  Future<bool> completeRallyWithLoss({MatchPlayer? player, RallyActionTypes? actionType}) async {
+    // If we have events, just complete. Otherwise, add a loss action first.
+    if (state.currentEvents.isEmpty) {
+      if (player != null && actionType != null) {
+        logAction(actionType, player: player);
+      } else {
+        // Default to a generic attack error for loss (no player specified)
+        logAction(RallyActionTypes.attackError);
+      }
+    }
+    return await completeRally();
+  }
 }
+
+/// Running totals calculated from completed rallies
+class RunningTotals {
+  RunningTotals({
+    required this.fbk,
+    required this.wins,
+    required this.losses,
+    required this.transitionPoints,
+    required this.serveAces,
+    required this.serveErrors,
+    required this.attackKills,
+    required this.attackErrors,
+    required this.blocks,
+    required this.digs,
+    required this.assists,
+    required this.substitutions,
+    required this.timeouts,
+  });
+
+  final int fbk;
+  final int wins;
+  final int losses;
+  final int transitionPoints;
+  final int serveAces;
+  final int serveErrors;
+  final int attackKills;
+  final int attackErrors;
+  final int blocks;
+  final int digs;
+  final int assists;
+  final int substitutions;
+  final int timeouts;
+
+  int get totalRallies => wins + losses;
+  double get winPercentage => totalRallies > 0 ? (wins / totalRallies * 100) : 0.0;
+  
+  // Volleyball allows 15 substitutions per set
+  static const int maxSubstitutionsPerSet = 15;
+  int get substitutionsRemaining => maxSubstitutionsPerSet - substitutions;
+  bool get canSubstitute => substitutionsRemaining > 0;
+}
+
+/// Provider that calculates running totals from rally session
+final runningTotalsProvider = Provider.family<RunningTotals, String>((ref, matchId) {
+  final session = ref.watch(rallyCaptureSessionProvider(matchId));
+  
+  int fbk = 0;
+  int wins = 0;
+  int losses = 0;
+  int transitionPoints = 0;
+  int serveAces = 0;
+  int serveErrors = 0;
+  int attackKills = 0;
+  int attackErrors = 0;
+  int blocks = 0;
+  int digs = 0;
+  int assists = 0;
+  int substitutions = 0;
+  int timeouts = 0;
+
+  // Count stats from completed rallies
+  // Note: Substitutions and timeouts are counted from completed rallies only
+  // (they may be logged as events in rallies, but we only count them once when the rally completes)
+  for (final rally in session.completedRallies) {
+    for (final event in rally.events) {
+      if (event.type == RallyActionTypes.substitution) {
+        substitutions++;
+      } else if (event.type == RallyActionTypes.timeout) {
+        timeouts++;
+      }
+    }
+    bool isWin = false;
+    bool isLoss = false;
+    bool hasFBK = false;
+    bool isTransition = false;
+
+    for (final event in rally.events) {
+      // Count action types
+      switch (event.type) {
+        case RallyActionTypes.firstBallKill:
+          fbk++;
+          hasFBK = true;
+          isTransition = true;
+          break;
+        case RallyActionTypes.serveAce:
+          serveAces++;
+          isWin = true;
+          break;
+        case RallyActionTypes.serveError:
+          serveErrors++;
+          isLoss = true;
+          break;
+        case RallyActionTypes.attackKill:
+          attackKills++;
+          isWin = true;
+          break;
+        case RallyActionTypes.attackError:
+          attackErrors++;
+          isLoss = true;
+          break;
+        case RallyActionTypes.block:
+          blocks++;
+          isWin = true;
+          break;
+        case RallyActionTypes.dig:
+          digs++;
+          break;
+        case RallyActionTypes.assist:
+          assists++;
+          break;
+        default:
+          break;
+      }
+    }
+
+    // Determine win/loss based on point-scoring actions or errors
+    if (!isWin && !isLoss) {
+      // Check if rally ended with a point-scoring action (win) or error (loss)
+      final lastEvent = rally.events.isNotEmpty ? rally.events.last : null;
+      if (lastEvent != null) {
+        if (lastEvent.type.isPointScoring) {
+          isWin = true;
+        } else if (lastEvent.type.isError) {
+          isLoss = true;
+        }
+      }
+    }
+
+    if (isWin) {
+      wins++;
+      if (hasFBK || isTransition) {
+        transitionPoints++;
+      }
+    } else if (isLoss) {
+      losses++;
+    }
+  }
+
+  // Note: We don't count current events for substitutions/timeouts here because:
+  // 1. They will be counted when the rally completes
+  // 2. Substitutions/timeouts can happen between rallies, so they're logged as events
+  //    but we only want to count them once when the rally is finalized
+
+  return RunningTotals(
+    fbk: fbk,
+    wins: wins,
+    losses: losses,
+    transitionPoints: transitionPoints,
+    serveAces: serveAces,
+    serveErrors: serveErrors,
+    attackKills: attackKills,
+    attackErrors: attackErrors,
+    blocks: blocks,
+    digs: digs,
+    assists: assists,
+    substitutions: substitutions,
+    timeouts: timeouts,
+  );
+});
+
+/// Player statistics breakdown
+class PlayerStats {
+  PlayerStats({
+    required this.player,
+    required this.attackKills,
+    required this.attackErrors,
+    required this.attackAttempts,
+    required this.blocks,
+    required this.digs,
+    required this.assists,
+    required this.serveAces,
+    required this.serveErrors,
+    required this.fbk,
+  });
+
+  final MatchPlayer player;
+  final int attackKills;
+  final int attackErrors;
+  final int attackAttempts;
+  final int blocks;
+  final int digs;
+  final int assists;
+  final int serveAces;
+  final int serveErrors;
+  final int fbk;
+
+  int get totalAttacks => attackKills + attackErrors + attackAttempts;
+  double get attackPercentage => totalAttacks > 0 ? (attackKills / totalAttacks * 100) : 0.0;
+  // Attack Efficiency = (Kills - Errors) / Total Attempts
+  double get attackEfficiency => totalAttacks > 0 ? ((attackKills - attackErrors) / totalAttacks) : 0.0;
+  int get totalServes => serveAces + serveErrors;
+  double get servePercentage => totalServes > 0 ? (serveAces / totalServes * 100) : 0.0;
+}
+
+/// Provider that calculates per-player statistics
+final playerStatsProvider = Provider.family<List<PlayerStats>, String>((ref, matchId) {
+  final session = ref.watch(rallyCaptureSessionProvider(matchId));
+  final stateAsync = ref.watch(rallyCaptureStateProvider(matchId));
+  
+  // Return empty list if state is not loaded
+  if (!stateAsync.hasValue) {
+    return [];
+  }
+  
+  final state = stateAsync.value!;
+  final Map<String, PlayerStats> statsMap = {};
+  
+  // Initialize stats for all active players
+  for (final player in state.activePlayers) {
+    statsMap[player.id] = PlayerStats(
+      player: player,
+      attackKills: 0,
+      attackErrors: 0,
+      attackAttempts: 0,
+      blocks: 0,
+      digs: 0,
+      assists: 0,
+      serveAces: 0,
+      serveErrors: 0,
+      fbk: 0,
+    );
+  }
+
+  // Count stats from completed rallies
+  for (final rally in session.completedRallies) {
+    for (final event in rally.events) {
+      if (event.player == null) continue;
+      
+      final playerId = event.player!.id;
+      if (!statsMap.containsKey(playerId)) continue;
+      
+      final current = statsMap[playerId]!;
+      
+      switch (event.type) {
+        case RallyActionTypes.attackKill:
+          statsMap[playerId] = PlayerStats(
+            player: current.player,
+            attackKills: current.attackKills + 1,
+            attackErrors: current.attackErrors,
+            attackAttempts: current.attackAttempts,
+            blocks: current.blocks,
+            digs: current.digs,
+            assists: current.assists,
+            serveAces: current.serveAces,
+            serveErrors: current.serveErrors,
+            fbk: current.fbk,
+          );
+          break;
+        case RallyActionTypes.attackError:
+          statsMap[playerId] = PlayerStats(
+            player: current.player,
+            attackKills: current.attackKills,
+            attackErrors: current.attackErrors + 1,
+            attackAttempts: current.attackAttempts,
+            blocks: current.blocks,
+            digs: current.digs,
+            assists: current.assists,
+            serveAces: current.serveAces,
+            serveErrors: current.serveErrors,
+            fbk: current.fbk,
+          );
+          break;
+        case RallyActionTypes.attackAttempt:
+          statsMap[playerId] = PlayerStats(
+            player: current.player,
+            attackKills: current.attackKills,
+            attackErrors: current.attackErrors,
+            attackAttempts: current.attackAttempts + 1,
+            blocks: current.blocks,
+            digs: current.digs,
+            assists: current.assists,
+            serveAces: current.serveAces,
+            serveErrors: current.serveErrors,
+            fbk: current.fbk,
+          );
+          break;
+        case RallyActionTypes.block:
+          statsMap[playerId] = PlayerStats(
+            player: current.player,
+            attackKills: current.attackKills,
+            attackErrors: current.attackErrors,
+            attackAttempts: current.attackAttempts,
+            blocks: current.blocks + 1,
+            digs: current.digs,
+            assists: current.assists,
+            serveAces: current.serveAces,
+            serveErrors: current.serveErrors,
+            fbk: current.fbk,
+          );
+          break;
+        case RallyActionTypes.dig:
+          statsMap[playerId] = PlayerStats(
+            player: current.player,
+            attackKills: current.attackKills,
+            attackErrors: current.attackErrors,
+            attackAttempts: current.attackAttempts,
+            blocks: current.blocks,
+            digs: current.digs + 1,
+            assists: current.assists,
+            serveAces: current.serveAces,
+            serveErrors: current.serveErrors,
+            fbk: current.fbk,
+          );
+          break;
+        case RallyActionTypes.assist:
+          statsMap[playerId] = PlayerStats(
+            player: current.player,
+            attackKills: current.attackKills,
+            attackErrors: current.attackErrors,
+            attackAttempts: current.attackAttempts,
+            blocks: current.blocks,
+            digs: current.digs,
+            assists: current.assists + 1,
+            serveAces: current.serveAces,
+            serveErrors: current.serveErrors,
+            fbk: current.fbk,
+          );
+          break;
+        case RallyActionTypes.serveAce:
+          statsMap[playerId] = PlayerStats(
+            player: current.player,
+            attackKills: current.attackKills,
+            attackErrors: current.attackErrors,
+            attackAttempts: current.attackAttempts,
+            blocks: current.blocks,
+            digs: current.digs,
+            assists: current.assists,
+            serveAces: current.serveAces + 1,
+            serveErrors: current.serveErrors,
+            fbk: current.fbk,
+          );
+          break;
+        case RallyActionTypes.serveError:
+          statsMap[playerId] = PlayerStats(
+            player: current.player,
+            attackKills: current.attackKills,
+            attackErrors: current.attackErrors,
+            attackAttempts: current.attackAttempts,
+            blocks: current.blocks,
+            digs: current.digs,
+            assists: current.assists,
+            serveAces: current.serveAces,
+            serveErrors: current.serveErrors + 1,
+            fbk: current.fbk,
+          );
+          break;
+        case RallyActionTypes.firstBallKill:
+          statsMap[playerId] = PlayerStats(
+            player: current.player,
+            attackKills: current.attackKills,
+            attackErrors: current.attackErrors,
+            attackAttempts: current.attackAttempts,
+            blocks: current.blocks,
+            digs: current.digs,
+            assists: current.assists,
+            serveAces: current.serveAces,
+            serveErrors: current.serveErrors,
+            fbk: current.fbk + 1,
+          );
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  return statsMap.values.toList()
+    ..sort((a, b) => a.player.jerseyNumber.compareTo(b.player.jerseyNumber));
+});
