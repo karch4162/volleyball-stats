@@ -333,7 +333,7 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
             id,
             set_number,
             result,
-            rallies:rallies(count)
+            rallies:rallies(id)
           )
         ''')
         .eq('team_id', effectiveTeamId);

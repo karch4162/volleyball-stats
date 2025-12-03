@@ -49,7 +49,9 @@ class _MatchSetupLandingScreenState extends ConsumerState<MatchSetupLandingScree
       final selectedTeamId = ref.watch(selectedTeamIdProvider);
       final selectedTeam = ref.watch(selectedTeamProvider);
       final teamsAsync = ref.watch(coachTeamsProvider);
-      
+      final templatesAsync = ref.watch(rosterTemplatesDefaultProvider);
+      final lastDraftAsync = ref.watch(lastMatchDraftProvider);
+
       // Debug logging
       if (kDebugMode) {
         debugPrint('[MatchSetupLandingScreen] Building...');
@@ -57,7 +59,7 @@ class _MatchSetupLandingScreenState extends ConsumerState<MatchSetupLandingScree
         debugPrint('[MatchSetupLandingScreen] Selected team: ${selectedTeam?.name ?? "null"}');
         debugPrint('[MatchSetupLandingScreen] Teams async state: loading=${teamsAsync.isLoading}, hasValue=${teamsAsync.hasValue}, hasError=${teamsAsync.hasError}');
       }
-      
+
       // Wait for team to be selected before showing content
       // This prevents blank screen when auto-selection is in progress
       if (selectedTeamId == null) {
@@ -75,11 +77,7 @@ class _MatchSetupLandingScreenState extends ConsumerState<MatchSetupLandingScree
           ),
         );
       }
-      
-      // Watch providers at the top level to ensure proper rebuilds
-      final templatesAsync = ref.watch(rosterTemplatesDefaultProvider);
-      final lastDraftAsync = ref.watch(lastMatchDraftProvider);
-      
+
       // Debug logging
       if (kDebugMode) {
         debugPrint('[MatchSetupLandingScreen] Teams loaded, rendering content...');

@@ -32,10 +32,11 @@ class AnalyticsCalculator {
     return kills / attempts;
   }
 
-  /// Calculate Block Efficiency: Blocks / Total Attempts
-  static double calculateBlockEfficiency(int blocks, int attempts) {
-    if (attempts == 0) return 0.0;
-    return blocks / attempts;
+  /// Calculate Block Efficiency: Blocks / Total Rallies
+  /// Approximates how often points are earned via blocks relative to total rallies
+  static double calculateBlockEfficiency(int blocks, int totalRallies) {
+    if (totalRallies == 0) return 0.0;
+    return blocks / totalRallies;
   }
 
   /// Calculate Serve Efficiency: (Aces - Errors) / Total Serves
@@ -77,7 +78,7 @@ class AnalyticsCalculator {
         totalAttempts,
       ),
       killPercentage: calculateKillPercentage(totalKills, totalAttempts),
-      blockEfficiency: calculateBlockEfficiency(totalBlocks, totalAttempts),
+      blockEfficiency: calculateBlockEfficiency(totalBlocks, totalRallies),
       serveEfficiency: calculateServeEfficiency(
         totalAces,
         totalServeErrors,

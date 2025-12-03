@@ -45,14 +45,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      
-      // Navigation will be handled by AuthGuard watching auth state
+      // AuthGuard rebuilds to the protected content once auth state changes,
+      // so there's no need to pop the route manually.
       if (mounted) {
-        final navigator = Navigator.of(context);
-        // Only pop if this login screen was pushed from another route
-        if (navigator.canPop()) {
-          navigator.pop();
-        }
+        setState(() {
+          _isLoading = false;
+        });
       }
     } catch (e) {
       setState(() {
