@@ -242,17 +242,6 @@ class _MatchSetupLandingScreenState extends ConsumerState<MatchSetupLandingScree
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Debug: Always show this to verify rendering
-              Container(
-                padding: const EdgeInsets.all(16),
-                margin: const EdgeInsets.only(bottom: 8),
-                color: Colors.red.withOpacity(0.3),
-                child: const Text(
-                  'DEBUG: MatchSetupLandingScreen is rendering - If you see this, content is visible',
-                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 8),
             // Cache status indicator
             const Padding(
               padding: EdgeInsets.only(bottom: 12),

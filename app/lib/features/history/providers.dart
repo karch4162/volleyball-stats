@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../match_setup/providers.dart';
@@ -42,6 +43,24 @@ class MatchSummariesParams {
   final DateTime? endDate;
   final String? opponent;
   final String? seasonLabel;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is MatchSummariesParams &&
+        other.startDate == startDate &&
+        other.endDate == endDate &&
+        other.opponent == opponent &&
+        other.seasonLabel == seasonLabel;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        startDate?.millisecondsSinceEpoch,
+        endDate?.millisecondsSinceEpoch,
+        opponent,
+        seasonLabel,
+      );
 }
 
 /// Provider for match details (full match recap)
@@ -267,6 +286,24 @@ class SeasonStatsParams {
   final DateTime? endDate;
   final List<String>? opponentIds;
   final String? seasonLabel;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is SeasonStatsParams &&
+        other.startDate == startDate &&
+        other.endDate == endDate &&
+        listEquals(other.opponentIds, opponentIds) &&
+        other.seasonLabel == seasonLabel;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        startDate?.millisecondsSinceEpoch,
+        endDate?.millisecondsSinceEpoch,
+        Object.hashAll(opponentIds ?? const []),
+        seasonLabel,
+      );
 }
 
 class SeasonStats {
