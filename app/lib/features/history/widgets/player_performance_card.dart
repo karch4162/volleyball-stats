@@ -131,8 +131,8 @@ class _StatColumn extends StatelessWidget {
         const SizedBox(height: 8),
         if (kills != null) ...[
           _StatRow('Kills', kills.toString()),
-          _StatRow('Errors', errors.toString()),
-          _StatRow('Attempts', attempts.toString()),
+          _StatRow('Errors', (errors ?? 0).toString()),
+          _StatRow('Attempts', (attempts ?? 0).toString()),
           const SizedBox(height: 4),
           _StatRow(
             'Efficiency',

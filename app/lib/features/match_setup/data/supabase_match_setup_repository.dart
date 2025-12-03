@@ -333,7 +333,14 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
             id,
             set_number,
             result,
-            rallies:rallies(id)
+            rallies:rallies(
+              id,
+              actions:actions(
+                action_type,
+                action_subtype,
+                outcome
+              )
+            )
           )
         ''')
         .eq('team_id', effectiveTeamId);
@@ -373,10 +380,24 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
           setsLost++;
         }
 
-        // Count rallies (simplified - would need to join with actions for accurate counts)
-        final rallies = setData['rallies'] as List<dynamic>?;
-        if (rallies != null) {
-          totalRallies += rallies.length;
+        final rallies = (setData['rallies'] as List<dynamic>?) ?? [];
+        for (final rally in rallies) {
+          totalRallies++;
+          final rallyData = rally as Map<String, dynamic>;
+          final actions = (rallyData['actions'] as List<dynamic>?) ?? [];
+          for (final action in actions) {
+            final actionData = action as Map<String, dynamic>;
+            final actionType = actionData['action_type'] as String?;
+            final actionSubtype = actionData['action_subtype'] as String?;
+            final outcome = actionData['outcome'] as String?;
+
+            if (outcome == 'first_ball_kill' || actionSubtype == 'first_ball_kill') {
+              totalFBK++;
+              totalTransitionPoints++;
+            } else if (outcome == 'transition' || actionType == 'transition') {
+              totalTransitionPoints++;
+            }
+          }
         }
       }
 
