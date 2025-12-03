@@ -48,7 +48,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       
       // Navigation will be handled by AuthGuard watching auth state
       if (mounted) {
-        Navigator.of(context).pop();
+        final navigator = Navigator.of(context);
+        // Only pop if this login screen was pushed from another route
+        if (navigator.canPop()) {
+          navigator.pop();
+        }
       }
     } catch (e) {
       setState(() {

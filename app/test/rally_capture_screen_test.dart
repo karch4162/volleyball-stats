@@ -54,25 +54,30 @@ class MockRallySyncRepository implements RallySyncRepository {
 }
 
 void main() {
-  testWidgets('RallyCaptureScreen records actions and updates timeline',
+  testWidgets('RallyCaptureScreen records actions and updates recent rallies',
       (tester) async {
     final fakeRoster = [
-      const MatchPlayer(
-          id: 'player-1', name: 'Player One', jerseyNumber: 1, position: 'S'),
-      const MatchPlayer(
-          id: 'player-2', name: 'Player Two', jerseyNumber: 2, position: 'OH'),
+      const MatchPlayer(id: 'player-1', name: 'Player One', jerseyNumber: 1, position: 'S'),
+      const MatchPlayer(id: 'player-2', name: 'Player Two', jerseyNumber: 2, position: 'OH'),
+      const MatchPlayer(id: 'player-3', name: 'Player Three', jerseyNumber: 3, position: 'MB'),
+      const MatchPlayer(id: 'player-4', name: 'Player Four', jerseyNumber: 4, position: 'L'),
+      const MatchPlayer(id: 'player-5', name: 'Player Five', jerseyNumber: 5, position: 'OPP'),
+      const MatchPlayer(id: 'player-6', name: 'Player Six', jerseyNumber: 6, position: 'DS'),
+      const MatchPlayer(id: 'player-7', name: 'Player Seven', jerseyNumber: 7, position: 'MB'),
     ];
+
+    final selectedPlayers = fakeRoster.take(6).map((p) => p.id).toSet();
+    final rotation = <int, String>{
+      for (var i = 0; i < 6; i++) i + 1: fakeRoster[i].id,
+    };
 
     final fakeDraft = MatchDraft(
       opponent: 'Opponent',
-      matchDate: null,
-      location: '',
-      seasonLabel: '',
-      selectedPlayerIds: fakeRoster.map((p) => p.id).toSet(),
-      startingRotation: {
-        1: fakeRoster[0].id,
-        2: fakeRoster[1].id,
-      },
+      matchDate: DateTime(2025, 1, 1),
+      location: 'Home',
+      seasonLabel: '2025',
+      selectedPlayerIds: selectedPlayers,
+      startingRotation: rotation,
     );
 
     final repository = InMemoryMatchSetupRepository(
@@ -95,28 +100,18 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(
-        find.text(
-            'No rallies recorded yet. Use the action buttons to start logging.'),
-        findsOneWidget);
+    expect(find.text('Recent Rallies'), findsOneWidget);
+    expect(find.text('No rallies yet'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Serve Ace'));
-    await tester.tap(find.text('Serve Ace'));
+    final aceButton = find.descendant(
+      of: find.byKey(const ValueKey('player-player-1')),
+      matching: find.text('Ace'),
+    );
+    await tester.ensureVisible(aceButton);
+    await tester.tap(aceButton);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('#1 Player One').last);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Rally 1 (In Progress)'), findsOneWidget);
-    expect(find.text('Serve Ace • #1 Player One'), findsOneWidget);
-
-    await tester
-        .ensureVisible(find.widgetWithText(FilledButton, 'Complete Rally'));
-    await tester.tap(find.widgetWithText(FilledButton, 'Complete Rally'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Rally 1 (In Progress)'), findsNothing);
-    expect(find.text('Rally 1'), findsOneWidget);
-    expect(find.text('Serve Ace • #1 Player One'), findsOneWidget);
+    expect(find.text('No rallies yet'), findsNothing);
+    expect(find.text('Serve Ace by Player One'), findsOneWidget);
   });
 }

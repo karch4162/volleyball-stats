@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:volleyball_stats_app/features/match_setup/match_setup_flow.dart';
+import 'package:volleyball_stats_app/features/match_setup/models/match_player.dart';
+import 'package:volleyball_stats_app/features/match_setup/providers.dart';
 
 Future<void> _configureLargeWindow(WidgetTester tester) async {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
@@ -14,109 +16,71 @@ Future<void> _configureLargeWindow(WidgetTester tester) async {
   });
 }
 
+const _testRoster = [
+  MatchPlayer(id: 'p1', name: 'Ava Setter', jerseyNumber: 1, position: 'S'),
+  MatchPlayer(id: 'p2', name: 'Brooke Opp', jerseyNumber: 2, position: 'OPP'),
+  MatchPlayer(id: 'p3', name: 'Callie Middle', jerseyNumber: 9, position: 'MB'),
+  MatchPlayer(id: 'p4', name: 'Dani Libero', jerseyNumber: 4, position: 'L'),
+  MatchPlayer(id: 'p5', name: 'Emery Outside', jerseyNumber: 7, position: 'OH'),
+  MatchPlayer(id: 'p6', name: 'Finley DS', jerseyNumber: 11, position: 'DS'),
+  MatchPlayer(id: 'p7', name: 'Gia Setter', jerseyNumber: 12, position: 'S'),
+  MatchPlayer(id: 'p8', name: 'Haven Middle', jerseyNumber: 15, position: 'MB'),
+];
+
+Future<void> _pumpMatchSetupFlow(WidgetTester tester) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        matchSetupRosterProvider.overrideWith((ref) async => _testRoster),
+      ],
+      child: const MaterialApp(
+        home: MatchSetupFlow(),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _togglePlayers(WidgetTester tester, List<int> indexes) async {
+  for (final index in indexes) {
+    await tester.tap(find.byType(FilterChip).at(index));
+    await tester.pump();
+  }
+}
+
 void main() {
-  testWidgets('renders match metadata step by default', (tester) async {
+  testWidgets('renders streamlined sections by default', (tester) async {
     await _configureLargeWindow(tester);
+    await _pumpMatchSetupFlow(tester);
 
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
-          home: MatchSetupFlow(),
-        ),
-      ),
-    );
-
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-
-    await tester.pumpAndSettle();
-
-    expect(find.text('Match'), findsOneWidget);
-    expect(find.byType(Stepper), findsOneWidget);
+    expect(find.text('Match Info'), findsOneWidget);
+    expect(find.text('Roster Selection'), findsOneWidget);
+    expect(find.text('Starting Rotation'), findsOneWidget);
     expect(find.text('Select match date'), findsOneWidget);
+    expect(find.byType(FilterChip), findsNWidgets(_testRoster.length));
   });
 
-  testWidgets('requires at least six players before advancing past roster', (tester) async {
+  testWidgets('shows roster warning until six players selected', (tester) async {
     await _configureLargeWindow(tester);
+    await _pumpMatchSetupFlow(tester);
 
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
-          home: MatchSetupFlow(),
-        ),
-      ),
-    );
+    await _togglePlayers(tester, [0, 1, 2]);
 
-    await tester.pumpAndSettle();
+    expect(find.text('Select at least 6 players'), findsOneWidget);
 
-    // Fill metadata minimal requirements.
-    await tester.enterText(find.byType(TextField).at(0), 'Ridgeview Hawks');
-    await tester.tap(find.text('Select match date'));
-    await tester.pumpAndSettle();
-    final today = DateTime.now().day.toString();
-    await tester.tap(find.text(today).first);
-    await tester.tap(find.text('OK'));
-    await tester.pumpAndSettle();
-
-    // Proceed to roster step.
-    await tester.tap(find.text('Continue'));
-    await tester.pumpAndSettle();
-
-    // Attempt to continue without enough players.
-    await tester.tap(find.text('Continue'));
+    await _togglePlayers(tester, [3, 4, 5]);
     await tester.pump();
 
-    expect(
-      find.text('Select at least six players for your match roster.'),
-      findsOneWidget,
-    );
+    expect(find.text('Select at least 6 players'), findsNothing);
   });
 
-  testWidgets('requires full rotation assignments before summary', (tester) async {
+  testWidgets('shows rotation warning when roster ready but rotation empty', (tester) async {
     await _configureLargeWindow(tester);
+    await _pumpMatchSetupFlow(tester);
 
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
-          home: MatchSetupFlow(),
-        ),
-      ),
-    );
+    await _togglePlayers(tester, [0, 1, 2, 3, 4, 5]);
 
-    await tester.pumpAndSettle();
-
-    // Fill metadata.
-    await tester.enterText(find.byType(TextField).at(0), 'Summit Bears');
-    await tester.tap(find.text('Select match date'));
-    await tester.pumpAndSettle();
-    final today = DateTime.now().day.toString();
-    await tester.tap(find.text(today).first);
-    await tester.tap(find.text('OK'));
-    await tester.pumpAndSettle();
-
-    // Continue to roster.
-    await tester.tap(find.text('Continue'));
-    await tester.pumpAndSettle();
-
-    // Select six players.
-    final rosterChips = find.byType(FilterChip);
-    for (var i = 0; i < 6; i++) {
-      await tester.tap(rosterChips.at(i));
-      await tester.pump();
-    }
-
-    await tester.tap(find.text('Continue'));
-    await tester.pumpAndSettle();
-
-    // Attempt to continue without assigning rotation.
-    final continueButton = find.widgetWithText(FilledButton, 'Continue');
-    await tester.ensureVisible(continueButton);
-    await tester.tap(continueButton);
-    await tester.pump();
-
-    expect(
-      find.text('Assign all six rotation spots before continuing.'),
-      findsOneWidget,
-    );
+    expect(find.text('Assign all 6 rotation positions'), findsOneWidget);
   });
 }
 

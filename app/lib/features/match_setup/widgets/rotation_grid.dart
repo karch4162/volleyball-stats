@@ -52,6 +52,7 @@ class RotationGrid extends StatelessWidget {
           children: [
             Expanded(
               child: _RotationPosition(
+                key: const ValueKey('rotation-1'),
                 position: 1,
                 player: _getPlayerForRotation(1),
                 availablePlayers: availablePlayers,
@@ -61,6 +62,7 @@ class RotationGrid extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _RotationPosition(
+                key: const ValueKey('rotation-2'),
                 position: 2,
                 player: _getPlayerForRotation(2),
                 availablePlayers: availablePlayers,
@@ -70,6 +72,7 @@ class RotationGrid extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _RotationPosition(
+                key: const ValueKey('rotation-3'),
                 position: 3,
                 player: _getPlayerForRotation(3),
                 availablePlayers: availablePlayers,
@@ -83,6 +86,7 @@ class RotationGrid extends StatelessWidget {
           children: [
             Expanded(
               child: _RotationPosition(
+                key: const ValueKey('rotation-4'),
                 position: 4,
                 player: _getPlayerForRotation(4),
                 availablePlayers: availablePlayers,
@@ -92,6 +96,7 @@ class RotationGrid extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _RotationPosition(
+                key: const ValueKey('rotation-5'),
                 position: 5,
                 player: _getPlayerForRotation(5),
                 availablePlayers: availablePlayers,
@@ -101,6 +106,7 @@ class RotationGrid extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _RotationPosition(
+                key: const ValueKey('rotation-6'),
                 position: 6,
                 player: _getPlayerForRotation(6),
                 availablePlayers: availablePlayers,
@@ -116,6 +122,7 @@ class RotationGrid extends StatelessWidget {
 
 class _RotationPosition extends StatelessWidget {
   const _RotationPosition({
+    super.key,
     required this.position,
     required this.player,
     required this.availablePlayers,
