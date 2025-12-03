@@ -36,5 +36,26 @@ abstract class MatchSetupRepository {
     required String teamId,
     required String templateId,
   });
+
+  // History methods
+  Future<List<dynamic>> fetchMatchSummaries({
+    required String teamId,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? opponent,
+    String? seasonLabel,
+  });
+
+  Future<Map<String, dynamic>?> fetchMatchDetails({
+    required String matchId,
+  });
+
+  Future<Map<String, dynamic>> fetchSeasonStats({
+    required String teamId,
+    DateTime? startDate,
+    DateTime? endDate,
+    List<String>? opponentIds,
+    String? seasonLabel,
+  });
 }
 

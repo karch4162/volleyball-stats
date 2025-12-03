@@ -1,9 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/cache_status_indicator.dart';
 import '../../core/widgets/glass_container.dart';
+import '../history/match_history_screen.dart';
+import '../history/season_dashboard_screen.dart';
 import '../players/player_list_screen.dart';
 import '../teams/team_providers.dart';
 import '../teams/team_list_screen.dart';
@@ -15,26 +18,164 @@ import 'providers.dart';
 import 'template_list_screen.dart';
 import 'constants.dart';
 
-class MatchSetupLandingScreen extends ConsumerWidget {
+class MatchSetupLandingScreen extends ConsumerStatefulWidget {
   const MatchSetupLandingScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Watch auto-select provider to ensure single team is auto-selected
-    ref.watch(autoSelectTeamProvider);
-    
-    final templatesAsync = ref.watch(rosterTemplatesDefaultProvider);
-    final lastDraftAsync = ref.watch(lastMatchDraftProvider);
-    final selectedTeam = ref.watch(selectedTeamProvider);
-    final teamsAsync = ref.watch(coachTeamsProvider);
+  ConsumerState<MatchSetupLandingScreen> createState() => _MatchSetupLandingScreenState();
+}
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Start New Match'),
-        backgroundColor: Colors.transparent,
-        actions: [
-          PopupMenuButton<String>(
+class _MatchSetupLandingScreenState extends ConsumerState<MatchSetupLandingScreen> {
+  bool _hasForcedRebuild = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Force a rebuild after first frame to ensure rendering
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_hasForcedRebuild && mounted) {
+        _hasForcedRebuild = true;
+        if (kDebugMode) {
+          debugPrint('[MatchSetupLandingScreen] Forcing rebuild after first frame');
+        }
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    try {
+      final selectedTeamId = ref.watch(selectedTeamIdProvider);
+      final selectedTeam = ref.watch(selectedTeamProvider);
+      final teamsAsync = ref.watch(coachTeamsProvider);
+      
+      // Debug logging
+      if (kDebugMode) {
+        debugPrint('[MatchSetupLandingScreen] Building...');
+        debugPrint('[MatchSetupLandingScreen] Selected team ID: ${selectedTeamId ?? "null"}');
+        debugPrint('[MatchSetupLandingScreen] Selected team: ${selectedTeam?.name ?? "null"}');
+        debugPrint('[MatchSetupLandingScreen] Teams async state: loading=${teamsAsync.isLoading}, hasValue=${teamsAsync.hasValue}, hasError=${teamsAsync.hasError}');
+      }
+      
+      // Wait for team to be selected before showing content
+      // This prevents blank screen when auto-selection is in progress
+      if (selectedTeamId == null) {
+        if (kDebugMode) {
+          debugPrint('[MatchSetupLandingScreen] No team selected yet, showing loading...');
+        }
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            title: const Text('Start New Match'),
+            backgroundColor: Colors.transparent,
+          ),
+          body: const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+      
+      // Watch providers at the top level to ensure proper rebuilds
+      final templatesAsync = ref.watch(rosterTemplatesDefaultProvider);
+      final lastDraftAsync = ref.watch(lastMatchDraftProvider);
+      
+      // Debug logging
+      if (kDebugMode) {
+        debugPrint('[MatchSetupLandingScreen] Teams loaded, rendering content...');
+        debugPrint('[MatchSetupLandingScreen] Templates async state: loading=${templatesAsync.isLoading}, hasValue=${templatesAsync.hasValue}, hasError=${templatesAsync.hasError}');
+        if (templatesAsync.hasError) {
+          debugPrint('[MatchSetupLandingScreen] Templates error: ${templatesAsync.error}');
+          debugPrint('[MatchSetupLandingScreen] Templates stack: ${templatesAsync.stackTrace}');
+        }
+        if (lastDraftAsync.hasError) {
+          debugPrint('[MatchSetupLandingScreen] Last draft error: ${lastDraftAsync.error}');
+        }
+        debugPrint('[MatchSetupLandingScreen] About to return Scaffold...');
+      }
+
+      // Always build the Scaffold structure - don't wait for teams
+      // This ensures the screen renders immediately
+      if (kDebugMode) {
+        debugPrint('[MatchSetupLandingScreen] Building Scaffold (teams hasValue: ${teamsAsync.hasValue})');
+      }
+
+      if (!teamsAsync.hasValue) {
+        if (kDebugMode) {
+          debugPrint('[MatchSetupLandingScreen] Teams not loaded yet, showing loading');
+        }
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            title: const Text('Start New Match'),
+            backgroundColor: Colors.transparent,
+          ),
+          body: const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+
+      if (teamsAsync.hasError) {
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            title: const Text('Start New Match'),
+            backgroundColor: Colors.transparent,
+          ),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Error Loading Teams',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    teamsAsync.error.toString(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      ref.invalidate(coachTeamsProvider);
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+
+      // Teams are loaded, build the full Scaffold
+      // Use a key to ensure proper rendering
+      final scaffold = Scaffold(
+        key: ValueKey('match_setup_landing_${selectedTeamId}_${teamsAsync.hasValue}'),
+        backgroundColor: AppColors.background,
+            appBar: AppBar(
+              title: const Text('Start New Match'),
+              backgroundColor: Colors.transparent,
+              actions: [
+                PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
               switch (value) {
@@ -92,44 +233,45 @@ class MatchSetupLandingScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+                ],
+              ),
             ],
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 8),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Debug: Always show this to verify rendering
+              Container(
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: 8),
+                color: Colors.red.withOpacity(0.3),
+                child: const Text(
+                  'DEBUG: MatchSetupLandingScreen is rendering - If you see this, content is visible',
+                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 8),
             // Cache status indicator
             const Padding(
               padding: EdgeInsets.only(bottom: 12),
               child: CacheStatusIndicator(),
             ),
-            // Team selector header
-            teamsAsync.when(
-              data: (teams) {
-                if (teams.length <= 1) {
-                  // Only one team or no teams - don't show switcher
-                  return const SizedBox.shrink();
-                }
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: _TeamSelectorHeader(
-                    selectedTeam: selectedTeam,
-                    teams: teams,
-                    onTeamSelected: (teamId) {
-                      ref.read(selectedTeamIdProvider.notifier).state = teamId;
-                      // Refresh templates for the new team
-                      ref.invalidate(rosterTemplatesDefaultProvider);
-                    },
-                  ),
-                );
-              },
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
-            ),
+            // Team selector header (teamsAsync is already loaded at this point)
+            if (teamsAsync.hasValue && teamsAsync.value!.length > 1)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _TeamSelectorHeader(
+                  selectedTeam: selectedTeam,
+                  teams: teamsAsync.value!,
+                  onTeamSelected: (teamId) {
+                    ref.read(selectedTeamIdProvider.notifier).state = teamId;
+                    // Refresh templates for the new team
+                    ref.invalidate(rosterTemplatesDefaultProvider);
+                  },
+                ),
+              ),
             const Text(
               'Quick Start',
               style: TextStyle(
@@ -155,7 +297,13 @@ class MatchSetupLandingScreen extends ConsumerWidget {
                 );
               },
               loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (error, stackTrace) {
+                if (kDebugMode) {
+                  debugPrint('[MatchSetupLandingScreen] Error loading last draft: $error');
+                  debugPrint('[MatchSetupLandingScreen] Stack: $stackTrace');
+                }
+                return const SizedBox.shrink(); // Don't show error in UI, just log it
+              },
             ),
 
             // Use Template Option
@@ -183,7 +331,36 @@ class MatchSetupLandingScreen extends ConsumerWidget {
                   onTap: null,
                 ),
               ),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (error, stackTrace) {
+                if (kDebugMode) {
+                  debugPrint('[MatchSetupLandingScreen] Error loading templates: $error');
+                  debugPrint('[MatchSetupLandingScreen] Stack: $stackTrace');
+                }
+                // Show error message to user instead of hiding it
+                return Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Error loading templates: ${error.toString()}',
+                            style: const TextStyle(color: Colors.red, fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
 
             // Start Fresh Option
@@ -198,10 +375,111 @@ class MatchSetupLandingScreen extends ConsumerWidget {
             ),
 
             const SizedBox(height: 32),
-          ],
+            const Text(
+              'History & Analytics',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Match History Option
+            _QuickStartCard(
+              icon: Icons.history_rounded,
+              title: 'Match History',
+              subtitle: 'View past matches and statistics',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const MatchHistoryScreen(),
+                ),
+              ),
+            ),
+
+            // Season Dashboard Option
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: _QuickStartCard(
+                icon: Icons.analytics_rounded,
+                title: 'Season Dashboard',
+                subtitle: 'View season statistics and trends',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const SeasonDashboardScreen(),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 32),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+          
+      if (kDebugMode) {
+        debugPrint('[MatchSetupLandingScreen] Scaffold built successfully');
+      }
+          
+      return scaffold;
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('[MatchSetupLandingScreen] ERROR in build: $e');
+        debugPrint('[MatchSetupLandingScreen] Stack trace: $stackTrace');
+      }
+      // Always show error screen, never return blank
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const Text('Start New Match'),
+          backgroundColor: Colors.transparent,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Colors.red,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Error Loading Screen',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  e.toString(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+                if (kDebugMode) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    stackTrace.toString(),
+                    style: const TextStyle(
+                      color: AppColors.textDisabled,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   String _getLastMatchSubtitle(BuildContext context, MatchDraft draft) {

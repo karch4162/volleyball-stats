@@ -39,22 +39,13 @@ final selectedTeamIdProvider = StateProvider<String?>((ref) => null);
 
 /// Provider that auto-selects a single team when there's only one team
 /// This ensures coaches with a single team don't need to manually select it
-/// Watch this provider in widgets that need auto-selection to work
+/// This provider should be watched in widgets, but the actual auto-selection
+/// logic should be handled using ref.listen in the widget to avoid Riverpod errors
 final autoSelectTeamProvider = Provider<void>((ref) {
-  final teams = ref.watch(coachTeamsProvider);
-  final selectedTeamId = ref.watch(selectedTeamIdProvider);
-  
-  teams.whenData((teamList) {
-    // Auto-select if there's exactly one team and no team is currently selected
-    if (teamList.length == 1 && selectedTeamId == null) {
-      // Use Future.microtask to avoid modifying state during build
-      Future.microtask(() {
-        if (ref.read(selectedTeamIdProvider) == null) {
-          ref.read(selectedTeamIdProvider.notifier).state = teamList.first.id;
-        }
-      });
-    }
-  });
+  // This provider exists for compatibility but doesn't modify state
+  // The actual auto-selection is handled in widgets using ref.listen
+  ref.watch(coachTeamsProvider);
+  ref.watch(selectedTeamIdProvider);
 });
 
 /// Provider that provides the currently selected team

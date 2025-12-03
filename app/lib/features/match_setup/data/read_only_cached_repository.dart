@@ -93,5 +93,37 @@ class ReadOnlyCachedRepository implements MatchSetupRepository {
     // Template usage updates are non-critical, so we can skip them when offline
     // This allows viewing templates offline without errors
   }
+
+  @override
+  Future<List<dynamic>> fetchMatchSummaries({
+    required String teamId,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? opponent,
+    String? seasonLabel,
+  }) async {
+    // Return empty list when offline - history requires Supabase connection
+    return [];
+  }
+
+  @override
+  Future<Map<String, dynamic>?> fetchMatchDetails({
+    required String matchId,
+  }) async {
+    // Return null when offline - history requires Supabase connection
+    return null;
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchSeasonStats({
+    required String teamId,
+    DateTime? startDate,
+    DateTime? endDate,
+    List<String>? opponentIds,
+    String? seasonLabel,
+  }) async {
+    // Return empty map when offline - history requires Supabase connection
+    return {};
+  }
 }
 

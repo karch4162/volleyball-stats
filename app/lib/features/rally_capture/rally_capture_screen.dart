@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
 import 'providers.dart';
 import 'models/rally_models.dart';
+import '../history/set_dashboard_screen.dart';
 import '../match_setup/match_setup_flow.dart';
 import '../match_setup/models/match_player.dart';
 import '../export/export_screen.dart';
@@ -53,6 +54,17 @@ class RallyCaptureScreen extends ConsumerWidget {
             },
             onNewSet: () async {
               await _showNewSetDialog(context, ref, matchId);
+            },
+            onSetDashboard: () {
+              final session = ref.read(rallyCaptureSessionProvider(matchId));
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => SetDashboardScreen(
+                    matchId: matchId,
+                    setNumber: session.currentSetNumber,
+                  ),
+                ),
+              );
             },
           ),
           Expanded(
@@ -282,6 +294,7 @@ class _CustomAppBar extends ConsumerWidget {
     required this.onPlayerStats,
     required this.onEndMatch,
     required this.onNewSet,
+    required this.onSetDashboard,
   });
 
   final String matchId;
@@ -290,6 +303,7 @@ class _CustomAppBar extends ConsumerWidget {
   final VoidCallback onPlayerStats;
   final VoidCallback onEndMatch;
   final VoidCallback onNewSet;
+  final VoidCallback onSetDashboard;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -367,6 +381,8 @@ class _CustomAppBar extends ConsumerWidget {
               onSelected: (value) {
                 if (value == 'export') {
                   onExport();
+                } else if (value == 'set_dashboard') {
+                  onSetDashboard();
                 } else if (value == 'new_set') {
                   onNewSet();
                 } else if (value == 'end_match') {
@@ -381,6 +397,16 @@ class _CustomAppBar extends ConsumerWidget {
                       Icon(Icons.download_rounded, size: 18, color: AppColors.indigo),
                       SizedBox(width: 8),
                       Text('Export'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'set_dashboard',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.dashboard_rounded, size: 18, color: AppColors.purple),
+                      const SizedBox(width: 8),
+                      Text('Set Dashboard (Set ${session.currentSetNumber})'),
                     ],
                   ),
                 ),

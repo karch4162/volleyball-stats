@@ -286,6 +286,61 @@ class OfflineMatchSetupRepository implements MatchSetupRepository {
       print('Failed to update template usage: $e');
     }
   }
+
+  @override
+  Future<List<dynamic>> fetchMatchSummaries({
+    required String teamId,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? opponent,
+    String? seasonLabel,
+  }) async {
+    try {
+      final client = getSupabaseClientOrNull();
+      if (client == null) {
+        return [];
+      }
+      // Delegate to Supabase implementation logic
+      // For now, return empty list if offline
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>?> fetchMatchDetails({
+    required String matchId,
+  }) async {
+    try {
+      final client = getSupabaseClientOrNull();
+      if (client == null) {
+        return null;
+      }
+      return null; // Would implement full query here
+    } catch (e) {
+      return null;
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchSeasonStats({
+    required String teamId,
+    DateTime? startDate,
+    DateTime? endDate,
+    List<String>? opponentIds,
+    String? seasonLabel,
+  }) async {
+    try {
+      final client = getSupabaseClientOrNull();
+      if (client == null) {
+        return {};
+      }
+      return {}; // Would implement full aggregation here
+    } catch (e) {
+      return {};
+    }
+  }
 }
 
 MatchPlayer _decodePlayer(Map<String, dynamic> map) {

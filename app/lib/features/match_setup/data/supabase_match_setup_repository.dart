@@ -306,5 +306,323 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
       await saveRosterTemplate(teamId: effectiveTeamId, template: updated);
     }
   }
+
+  @override
+  Future<List<dynamic>> fetchMatchSummaries({
+    required String teamId,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? opponent,
+    String? seasonLabel,
+  }) async {
+    if (_currentUserId == null) {
+      throw Exception('User must be authenticated to fetch match summaries');
+    }
+
+    final effectiveTeamId = _getEffectiveTeamId(teamId);
+    
+    var query = _client
+        .from('matches')
+        .select('''
+          id,
+          opponent,
+          match_date,
+          location,
+          season_label,
+          sets:sets(
+            id,
+            set_number,
+            result,
+            rallies:rallies(count)
+          )
+        ''')
+        .eq('team_id', effectiveTeamId);
+
+    if (startDate != null) {
+      query = query.gte('match_date', startDate.toIso8601String().split('T')[0]);
+    }
+    if (endDate != null) {
+      query = query.lte('match_date', endDate.toIso8601String().split('T')[0]);
+    }
+    if (opponent != null && opponent.isNotEmpty) {
+      query = query.ilike('opponent', '%$opponent%');
+    }
+    if (seasonLabel != null && seasonLabel.isNotEmpty) {
+      query = query.eq('season_label', seasonLabel);
+    }
+
+    final result = await query.order('match_date', ascending: false);
+    final matches = (result as List<dynamic>).cast<Map<String, dynamic>>();
+
+    // Process matches to calculate summaries
+    final summaries = <Map<String, dynamic>>[];
+    for (final match in matches) {
+      final sets = (match['sets'] as List<dynamic>?) ?? [];
+      int setsWon = 0;
+      int setsLost = 0;
+      int totalRallies = 0;
+      int totalFBK = 0;
+      int totalTransitionPoints = 0;
+
+      for (final set in sets) {
+        final setData = set as Map<String, dynamic>;
+        final result = setData['result'] as String?;
+        if (result == 'win') {
+          setsWon++;
+        } else if (result == 'loss') {
+          setsLost++;
+        }
+
+        // Count rallies (simplified - would need to join with actions for accurate counts)
+        final rallies = setData['rallies'] as List<dynamic>?;
+        if (rallies != null) {
+          totalRallies += rallies.length;
+        }
+      }
+
+      summaries.add({
+        'id': match['id'],
+        'opponent': match['opponent'],
+        'match_date': match['match_date'],
+        'location': match['location'] ?? '',
+        'season_label': match['season_label'],
+        'sets_won': setsWon,
+        'sets_lost': setsLost,
+        'total_rallies': totalRallies,
+        'total_fbk': totalFBK, // Would need to aggregate from actions
+        'total_transition_points': totalTransitionPoints, // Would need to aggregate from actions
+        'is_win': setsWon > setsLost,
+      });
+    }
+
+    return summaries;
+  }
+
+  @override
+  Future<Map<String, dynamic>?> fetchMatchDetails({
+    required String matchId,
+  }) async {
+    if (_currentUserId == null) {
+      throw Exception('User must be authenticated to fetch match details');
+    }
+
+    try {
+      // Fetch match with sets, rallies, and actions
+      final matchResult = await _client
+          .from('matches')
+          .select('''
+            *,
+            sets:sets(
+              *,
+              rallies:rallies(
+                *,
+                actions:actions(*)
+              ),
+              substitutions:substitutions(*),
+              timeouts:timeouts(*)
+            )
+          ''')
+          .eq('id', matchId)
+          .single();
+
+      return matchResult as Map<String, dynamic>?;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching match details: $e');
+      }
+      return null;
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchSeasonStats({
+    required String teamId,
+    DateTime? startDate,
+    DateTime? endDate,
+    List<String>? opponentIds,
+    String? seasonLabel,
+  }) async {
+    if (_currentUserId == null) {
+      throw Exception('User must be authenticated to fetch season stats');
+    }
+
+    final effectiveTeamId = _getEffectiveTeamId(teamId);
+    
+    var query = _client
+        .from('matches')
+        .select('''
+          id,
+          opponent,
+          match_date,
+          sets:sets(
+            id,
+            result,
+            rallies:rallies(
+              id,
+              actions:actions(*)
+            )
+          )
+        ''')
+        .eq('team_id', effectiveTeamId);
+
+    if (startDate != null) {
+      query = query.gte('match_date', startDate.toIso8601String().split('T')[0]);
+    }
+    if (endDate != null) {
+      query = query.lte('match_date', endDate.toIso8601String().split('T')[0]);
+    }
+    if (opponentIds != null && opponentIds.isNotEmpty) {
+      // Note: This would need opponent IDs, but we store opponent as text
+      // For now, we'll filter by opponent name if needed
+    }
+    if (seasonLabel != null && seasonLabel.isNotEmpty) {
+      query = query.eq('season_label', seasonLabel);
+    }
+
+    final result = await query.order('match_date', ascending: false);
+    final matches = (result as List<dynamic>).cast<Map<String, dynamic>>();
+
+    // Aggregate statistics
+    int totalMatches = matches.length;
+    int matchesWon = 0;
+    int totalSetsWon = 0;
+    int totalSetsLost = 0;
+    int totalRallies = 0;
+    int totalFBK = 0;
+    int totalTransitionPoints = 0;
+    int totalKills = 0;
+    int totalErrors = 0;
+    int totalAttempts = 0;
+    int totalBlocks = 0;
+    int totalAces = 0;
+    int totalServeErrors = 0;
+    int totalServes = 0;
+
+    final playerStats = <String, Map<String, int>>{};
+
+    for (final match in matches) {
+      final sets = (match['sets'] as List<dynamic>?) ?? [];
+      int matchSetsWon = 0;
+      int matchSetsLost = 0;
+
+      for (final set in sets) {
+        final setData = set as Map<String, dynamic>;
+        final result = setData['result'] as String?;
+        if (result == 'win') {
+          matchSetsWon++;
+          totalSetsWon++;
+        } else if (result == 'loss') {
+          matchSetsLost++;
+          totalSetsLost++;
+        }
+
+        final rallies = (setData['rallies'] as List<dynamic>?) ?? [];
+        for (final rally in rallies) {
+          totalRallies++;
+          final rallyData = rally as Map<String, dynamic>;
+          final actions = (rallyData['actions'] as List<dynamic>?) ?? [];
+
+          for (final action in actions) {
+            final actionData = action as Map<String, dynamic>;
+            final actionType = actionData['action_type'] as String?;
+            final actionSubtype = actionData['action_subtype'] as String?;
+            final playerId = actionData['player_id'] as String?;
+
+            // Initialize player stats if needed
+            if (playerId != null && !playerStats.containsKey(playerId)) {
+              playerStats[playerId] = {
+                'kills': 0,
+                'errors': 0,
+                'attempts': 0,
+                'blocks': 0,
+                'aces': 0,
+                'serve_errors': 0,
+                'fbk': 0,
+              };
+            }
+
+            // Aggregate stats
+            if (actionType == 'attack') {
+              totalAttempts++;
+              if (playerId != null) {
+                playerStats[playerId]!['attempts'] =
+                    (playerStats[playerId]!['attempts'] ?? 0) + 1;
+              }
+              if (actionSubtype == 'kill') {
+                totalKills++;
+                if (playerId != null) {
+                  playerStats[playerId]!['kills'] =
+                      (playerStats[playerId]!['kills'] ?? 0) + 1;
+                }
+              } else if (actionSubtype == 'error') {
+                totalErrors++;
+                if (playerId != null) {
+                  playerStats[playerId]!['errors'] =
+                      (playerStats[playerId]!['errors'] ?? 0) + 1;
+                }
+              }
+            } else if (actionType == 'block') {
+              totalBlocks++;
+              if (playerId != null) {
+                playerStats[playerId]!['blocks'] =
+                    (playerStats[playerId]!['blocks'] ?? 0) + 1;
+              }
+            } else if (actionType == 'serve') {
+              totalServes++;
+              if (actionSubtype == 'ace') {
+                totalAces++;
+                if (playerId != null) {
+                  playerStats[playerId]!['aces'] =
+                      (playerStats[playerId]!['aces'] ?? 0) + 1;
+                }
+              } else if (actionSubtype == 'error') {
+                totalServeErrors++;
+                if (playerId != null) {
+                  playerStats[playerId]!['serve_errors'] =
+                      (playerStats[playerId]!['serve_errors'] ?? 0) + 1;
+                }
+              }
+            }
+
+            // Check for FBK and transition points
+            final outcome = actionData['outcome'] as String?;
+            if (outcome == 'first_ball_kill' || actionSubtype == 'first_ball_kill') {
+              totalFBK++;
+              if (playerId != null) {
+                playerStats[playerId]!['fbk'] =
+                    (playerStats[playerId]!['fbk'] ?? 0) + 1;
+              }
+              totalTransitionPoints++;
+            } else if (outcome == 'transition' || actionType == 'transition') {
+              totalTransitionPoints++;
+            }
+          }
+        }
+      }
+
+      if (matchSetsWon > matchSetsLost) {
+        matchesWon++;
+      }
+    }
+
+    return {
+      'total_matches': totalMatches,
+      'matches_won': matchesWon,
+      'matches_lost': totalMatches - matchesWon,
+      'total_sets_won': totalSetsWon,
+      'total_sets_lost': totalSetsLost,
+      'total_rallies': totalRallies,
+      'total_fbk': totalFBK,
+      'total_transition_points': totalTransitionPoints,
+      'total_kills': totalKills,
+      'total_errors': totalErrors,
+      'total_attempts': totalAttempts,
+      'total_blocks': totalBlocks,
+      'total_aces': totalAces,
+      'total_serve_errors': totalServeErrors,
+      'total_serves': totalServes,
+      'player_stats': playerStats,
+    };
+  }
 }
 

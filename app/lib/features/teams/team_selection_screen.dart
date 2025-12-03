@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,14 +8,56 @@ import '../auth/auth_provider.dart';
 import '../auth/auth_service.dart';
 import 'team_providers.dart';
 
-class TeamSelectionScreen extends ConsumerWidget {
+class TeamSelectionScreen extends ConsumerStatefulWidget {
   const TeamSelectionScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TeamSelectionScreen> createState() => _TeamSelectionScreenState();
+}
+
+class _TeamSelectionScreenState extends ConsumerState<TeamSelectionScreen> {
+  bool _hasAutoSelected = false;
+
+  @override
+  Widget build(BuildContext context) {
     final teamsAsync = ref.watch(coachTeamsProvider);
     final selectedTeamId = ref.watch(selectedTeamIdProvider);
     final currentUser = ref.watch(currentUserProvider);
+    
+    // Auto-select single team - HomeScreen will rebuild and show MatchSetupLandingScreen
+    teamsAsync.whenData((teams) {
+      if (teams.length == 1 && !_hasAutoSelected && selectedTeamId == null) {
+        _hasAutoSelected = true;
+        if (kDebugMode) {
+          debugPrint('[TeamSelectionScreen] Auto-selecting single team: ${teams.first.id}');
+        }
+        // Set immediately - this will trigger HomeScreen to rebuild
+        // We're in the build method, so we need to schedule it for after this build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          // Double-check it's still null (race condition protection)
+          final currentId = ref.read(selectedTeamIdProvider);
+          if (currentId == null) {
+            if (kDebugMode) {
+              debugPrint('[TeamSelectionScreen] Setting selected team ID to: ${teams.first.id}');
+            }
+            ref.read(selectedTeamIdProvider.notifier).state = teams.first.id;
+            if (kDebugMode) {
+              debugPrint('[TeamSelectionScreen] Team ID set to ${teams.first.id}, expecting HomeScreen rebuild');
+            }
+          } else {
+            if (kDebugMode) {
+              debugPrint('[TeamSelectionScreen] Team ID already set to $currentId, skipping');
+            }
+          }
+        });
+      }
+    });
+
+    if (kDebugMode) {
+      debugPrint('[TeamSelectionScreen] Building...');
+      debugPrint('[TeamSelectionScreen] Selected team ID: ${selectedTeamId ?? "null"}');
+      debugPrint('[TeamSelectionScreen] Teams async state: loading=${teamsAsync.isLoading}, hasValue=${teamsAsync.hasValue}, hasError=${teamsAsync.hasError}');
+    }
 
     return Scaffold(
       appBar: AppBar(

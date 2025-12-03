@@ -1,18 +1,89 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-const String supabaseUrl = String.fromEnvironment('SUPABASE_API_URL', defaultValue: '');
-const String supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
+// Compile-time constants from --dart-define (must be const)
+const String _supabaseUrlFromEnv = String.fromEnvironment('SUPABASE_API_URL', defaultValue: '');
+const String _supabaseAnonKeyFromEnv = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
+
+// Runtime getters that check --dart-define first, then .env file
+String get supabaseUrl {
+  // Check compile-time --dart-define first
+  if (_supabaseUrlFromEnv.isNotEmpty) {
+    if (kDebugMode) {
+      debugPrint('[supabaseUrl] Using --dart-define value');
+    }
+    return _supabaseUrlFromEnv;
+  }
+  // Fall back to .env file
+  try {
+    final value = dotenv.env['SUPABASE_API_URL'] ?? '';
+    if (kDebugMode && value.isNotEmpty) {
+      debugPrint('[supabaseUrl] Using .env value: ${value.substring(0, value.length > 30 ? 30 : value.length)}...');
+    }
+    // Trim any whitespace that might have been accidentally included
+    return value.trim();
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('[supabaseUrl] dotenv not loaded yet: $e');
+    }
+    return '';
+  }
+}
+
+String get supabaseAnonKey {
+  // Check compile-time --dart-define first
+  if (_supabaseAnonKeyFromEnv.isNotEmpty) {
+    if (kDebugMode) {
+      debugPrint('[supabaseAnonKey] Using --dart-define value');
+    }
+    return _supabaseAnonKeyFromEnv;
+  }
+  // Fall back to .env file
+  try {
+    final value = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+    if (kDebugMode && value.isNotEmpty) {
+      debugPrint('[supabaseAnonKey] Using .env value: ${value.substring(0, value.length > 20 ? 20 : value.length)}...');
+    }
+    // Trim any whitespace that might have been accidentally included
+    return value.trim();
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('[supabaseAnonKey] dotenv not loaded yet: $e');
+    }
+    return '';
+  }
+}
 
 SupabaseClient? _supabaseClient;
 
 Future<SupabaseClient?> initializeSupabase() async {
   if (kDebugMode) {
     print('=== Supabase Initialization ===');
-    print('  SUPABASE_API_URL provided: ${supabaseUrl.isNotEmpty}');
-    print('  SUPABASE_ANON_KEY provided: ${supabaseAnonKey.isNotEmpty}');
+    print('  Checking for credentials...');
+    
+    // Check --dart-define first (using const values)
+    print('  From --dart-define:');
+    print('    SUPABASE_API_URL: ${_supabaseUrlFromEnv.isNotEmpty ? "✓ (${_supabaseUrlFromEnv.length} chars)" : "✗ (not provided)"}');
+    print('    SUPABASE_ANON_KEY: ${_supabaseAnonKeyFromEnv.isNotEmpty ? "✓ (${_supabaseAnonKeyFromEnv.length} chars)" : "✗ (not provided)"}');
+    
+    // Check .env file
+    try {
+      final dotenvUrl = dotenv.env['SUPABASE_API_URL'] ?? '';
+      final dotenvKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+      print('  From .env file:');
+      print('    SUPABASE_API_URL: ${dotenvUrl.isNotEmpty ? "✓ (${dotenvUrl.length} chars)" : "✗ (missing or empty)"}');
+      print('    SUPABASE_ANON_KEY: ${dotenvKey.isNotEmpty ? "✓ (${dotenvKey.length} chars)" : "✗ (missing or empty)"}');
+    } catch (e) {
+      print('  From .env file: ✗ (dotenv not loaded: $e)');
+    }
+    
+    // Final values (from getters)
+    print('  Final values:');
+    print('    SUPABASE_API_URL: ${supabaseUrl.isNotEmpty ? "✓ (${supabaseUrl.length} chars)" : "✗ (empty)"}');
+    print('    SUPABASE_ANON_KEY: ${supabaseAnonKey.isNotEmpty ? "✓ (${supabaseAnonKey.length} chars)" : "✗ (empty)"}');
     if (supabaseUrl.isNotEmpty) {
-      print('  URL: ${supabaseUrl.substring(0, supabaseUrl.length > 50 ? 50 : supabaseUrl.length)}...');
+      print('    URL preview: ${supabaseUrl.substring(0, supabaseUrl.length > 50 ? 50 : supabaseUrl.length)}...');
     }
   }
 

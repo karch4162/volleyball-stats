@@ -98,5 +98,34 @@ class InMemoryMatchSetupRepository implements MatchSetupRepository {
     // Block updates when offline (templates are Supabase-only)
     throw const OfflineEntityCreationException('roster template update');
   }
+
+  @override
+  Future<List<dynamic>> fetchMatchSummaries({
+    required String teamId,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? opponent,
+    String? seasonLabel,
+  }) async {
+    return [];
+  }
+
+  @override
+  Future<Map<String, dynamic>?> fetchMatchDetails({
+    required String matchId,
+  }) async {
+    return null;
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchSeasonStats({
+    required String teamId,
+    DateTime? startDate,
+    DateTime? endDate,
+    List<String>? opponentIds,
+    String? seasonLabel,
+  }) async {
+    return {};
+  }
 }
 

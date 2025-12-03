@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -17,32 +18,129 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch auto-select provider to ensure single team is auto-selected
-    ref.watch(autoSelectTeamProvider);
-    
     // Trigger cache sync when authenticated (runs in background)
     ref.watch(cacheSyncProvider);
     
     final selectedTeamId = ref.watch(selectedTeamIdProvider);
     final teamsAsync = ref.watch(coachTeamsProvider);
     final currentUser = ref.watch(currentUserProvider);
+    
+    // Listen to selectedTeamId changes to ensure we rebuild when it changes
+    ref.listen<String?>(selectedTeamIdProvider, (previous, next) {
+      if (kDebugMode) {
+        debugPrint('[HomeScreen] selectedTeamId changed from ${previous ?? "null"} to ${next ?? "null"}');
+      }
+    });
 
     // Debug logging
-    if (teamsAsync.hasValue) {
-      print('HomeScreen: Teams loaded: ${teamsAsync.value?.length ?? 0}');
+    if (kDebugMode) {
+      debugPrint('[HomeScreen] Building...');
+      debugPrint('[HomeScreen] Selected team ID: ${selectedTeamId ?? "null"}');
+      debugPrint('[HomeScreen] Teams async state: loading=${teamsAsync.isLoading}, hasValue=${teamsAsync.hasValue}, hasError=${teamsAsync.hasError}');
+      if (teamsAsync.hasValue) {
+        debugPrint('[HomeScreen] Teams loaded: ${teamsAsync.value?.length ?? 0}');
+      }
+      if (teamsAsync.hasError) {
+        debugPrint('[HomeScreen] Error loading teams: ${teamsAsync.error}');
+        debugPrint('[HomeScreen] Stack trace: ${teamsAsync.stackTrace}');
+      }
     }
-    if (teamsAsync.hasError) {
-      print('HomeScreen: Error loading teams: ${teamsAsync.error}');
-      print('HomeScreen: Stack trace: ${teamsAsync.stackTrace}');
+
+    // Check if team is selected FIRST - this ensures we rebuild properly when team ID changes
+    if (selectedTeamId != null) {
+      if (kDebugMode) {
+        debugPrint('[HomeScreen] Team selected ($selectedTeamId), showing MatchSetupLandingScreen');
+      }
+      return teamsAsync.when(
+        data: (_) {
+          if (kDebugMode) {
+            debugPrint('[HomeScreen] Teams loaded, rendering MatchSetupLandingScreen');
+          }
+          return const MatchSetupLandingScreen();
+        },
+        loading: () => const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+        error: (error, stack) {
+          if (kDebugMode) {
+            debugPrint('[HomeScreen] Error loading teams when team is selected: $error');
+            debugPrint('[HomeScreen] Stack trace: $stack');
+          }
+          return Scaffold(
+            appBar: AppBar(title: const Text('Error Loading Teams')),
+            body: Container(
+              decoration: const BoxDecoration(
+                color: AppColors.background,
+              ),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: GlassContainer(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error Loading Teams',
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          error.toString(),
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: () {
+                            ref.invalidate(coachTeamsProvider);
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
     }
 
     // If no team is selected, show team selection
+    if (kDebugMode) {
+      debugPrint('[HomeScreen] No team selected, showing team selection UI');
+    }
     if (selectedTeamId == null) {
+      if (kDebugMode) {
+        debugPrint('[HomeScreen] No team selected, showing team selection UI');
+        debugPrint('[HomeScreen] Teams state: loading=${teamsAsync.isLoading}, hasValue=${teamsAsync.hasValue}, hasError=${teamsAsync.hasError}');
+        if (teamsAsync.hasValue) {
+          debugPrint('[HomeScreen] ⭐ Teams already loaded: ${teamsAsync.value?.length ?? 0} teams');
+        }
+      }
       return teamsAsync.when(
         data: (teams) {
-          print('HomeScreen: Teams data received: ${teams.length} teams');
+          if (kDebugMode) {
+            debugPrint('[HomeScreen] Teams data received: ${teams.length} teams');
+          }
           if (teams.isEmpty) {
             // No teams - show empty state with create option
+            if (kDebugMode) {
+              debugPrint('[HomeScreen] No teams found, showing empty state');
+            }
             return Scaffold(
               appBar: AppBar(
                 title: const Text('Volleyball Stats'),
@@ -122,15 +220,29 @@ class HomeScreen extends ConsumerWidget {
               ),
             );
           } else if (teams.length == 1) {
-            // Only one team - auto-select it
+            // Single team - auto-select it immediately
+            if (kDebugMode) {
+              debugPrint('[HomeScreen] Single team found, auto-selecting: ${teams.first.id}');
+            }
+            // Set the team ID immediately - this will trigger a rebuild
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              ref.read(selectedTeamIdProvider.notifier).state = teams.first.id;
+              final currentId = ref.read(selectedTeamIdProvider);
+              if (currentId == null) {
+                if (kDebugMode) {
+                  debugPrint('[HomeScreen] Setting selected team ID to: ${teams.first.id}');
+                }
+                ref.read(selectedTeamIdProvider.notifier).state = teams.first.id;
+              }
             });
+            // Show loading while auto-selection happens
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
           } else {
             // Multiple teams - show selection screen
+            if (kDebugMode) {
+              debugPrint('[HomeScreen] Showing team selection screen (${teams.length} teams)');
+            }
             return const TeamSelectionScreen();
           }
         },
@@ -192,9 +304,11 @@ class HomeScreen extends ConsumerWidget {
         },
       );
     }
-
-    // Team selected - show match setup landing
-    return const MatchSetupLandingScreen();
+    
+    // This should never be reached, but add a fallback just in case
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
+    );
   }
 }
 

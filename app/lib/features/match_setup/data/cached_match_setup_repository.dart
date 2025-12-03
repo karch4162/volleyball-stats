@@ -102,5 +102,48 @@ class CachedMatchSetupRepository implements MatchSetupRepository {
     final id = teamId.isEmpty ? _teamId : teamId;
     return _primary.updateTemplateUsage(teamId: id, templateId: templateId);
   }
+
+  @override
+  Future<List<dynamic>> fetchMatchSummaries({
+    required String teamId,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? opponent,
+    String? seasonLabel,
+  }) {
+    final id = teamId.isEmpty ? _teamId : teamId;
+    return _primary.fetchMatchSummaries(
+      teamId: id,
+      startDate: startDate,
+      endDate: endDate,
+      opponent: opponent,
+      seasonLabel: seasonLabel,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>?> fetchMatchDetails({
+    required String matchId,
+  }) {
+    return _primary.fetchMatchDetails(matchId: matchId);
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchSeasonStats({
+    required String teamId,
+    DateTime? startDate,
+    DateTime? endDate,
+    List<String>? opponentIds,
+    String? seasonLabel,
+  }) {
+    final id = teamId.isEmpty ? _teamId : teamId;
+    return _primary.fetchSeasonStats(
+      teamId: id,
+      startDate: startDate,
+      endDate: endDate,
+      opponentIds: opponentIds,
+      seasonLabel: seasonLabel,
+    );
+  }
 }
 
