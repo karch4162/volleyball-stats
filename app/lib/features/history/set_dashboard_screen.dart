@@ -4,9 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
 import '../rally_capture/providers.dart';
-import '../rally_capture/models/rally_models.dart';
+import 'models/player_performance.dart';
+import 'providers.dart';
+import 'widgets/player_performance_card_v2.dart';
+import 'widgets/player_stats_controls.dart';
 
-class SetDashboardScreen extends ConsumerWidget {
+class SetDashboardScreen extends ConsumerStatefulWidget {
   const SetDashboardScreen({
     super.key,
     required this.matchId,
@@ -17,14 +20,26 @@ class SetDashboardScreen extends ConsumerWidget {
   final int setNumber;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final session = ref.watch(rallyCaptureSessionProvider(matchId));
-    final totals = ref.watch(runningTotalsProvider(matchId));
+  ConsumerState<SetDashboardScreen> createState() => _SetDashboardScreenState();
+}
+
+class _SetDashboardScreenState extends ConsumerState<SetDashboardScreen> {
+  String _sortBy = 'efficiency'; // Default sort by efficiency as requested
+  bool _ascending = false; // Descending by default (highest first)
+
+  @override
+  Widget build(BuildContext context) {
+    final session = ref.watch(rallyCaptureSessionProvider(widget.matchId));
+    final totals = ref.watch(runningTotalsProvider(widget.matchId));
+    final playerStatsAsync = ref.watch(setPlayerStatsProvider(SetPlayerStatsParams(
+      matchId: widget.matchId,
+      setNumber: widget.setNumber,
+    )));
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Set $setNumber Dashboard'),
+        title: Text('Set ${widget.setNumber} Dashboard'),
         backgroundColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
@@ -39,7 +54,7 @@ class SetDashboardScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   Text(
-                    'Set $setNumber',
+                    'Set ${widget.setNumber}',
                     style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 24,
@@ -120,9 +135,9 @@ class SetDashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
 
-            // Rally breakdown
+            // Player Performance Section
             const Text(
-              'Rally Breakdown',
+              'Player Performance',
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 18,
@@ -130,14 +145,136 @@ class SetDashboardScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 12),
-            ...session.completedRallies.map((rally) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _RallyCard(rally: rally),
-                )),
+            
+            // Sort controls
+            PlayerStatsControls(
+              currentSortBy: _sortBy,
+              onSortChanged: (value) => setState(() => _sortBy = value),
+              ascending: _ascending,
+              onAscendingChanged: (value) => setState(() => _ascending = value),
+            ),
+            const SizedBox(height: 16),
+            
+            // Player stats list
+            playerStatsAsync.when(
+              data: (players) {
+                if (players.isEmpty) {
+                  return const GlassLightContainer(
+                    padding: EdgeInsets.all(24),
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    child: Center(
+                      child: Text(
+                        'No player statistics available for this set',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                
+                final sortedPlayers = _sortPlayers(players, _sortBy);
+                
+                return Column(
+                  children: sortedPlayers.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final player = entry.value;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: PlayerPerformanceCardV2(
+                        performance: player,
+                        expandedByDefault: index < 3, // Expand top 3 by default
+                        showRank: _sortBy != 'jersey',
+                        rank: _sortBy != 'jersey' ? index + 1 : null,
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+              error: (error, stack) => GlassLightContainer(
+                padding: const EdgeInsets.all(20),
+                borderRadius: const BorderRadius.all(Radius.circular(12)),
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.error_outline_rounded,
+                      size: 48,
+                      color: AppColors.rose,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Error loading player stats',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      error.toString(),
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  List<PlayerPerformance> _sortPlayers(List<PlayerPerformance> players, String sortBy) {
+    final sorted = List<PlayerPerformance>.from(players);
+    
+    switch (sortBy) {
+      case 'points':
+        sorted.sort((a, b) => b.totalPoints.compareTo(a.totalPoints));
+        break;
+      case 'efficiency':
+        sorted.sort((a, b) => b.attackEfficiency.compareTo(a.attackEfficiency));
+        break;
+      case 'kills':
+        sorted.sort((a, b) => b.kills.compareTo(a.kills));
+        break;
+      case 'blocks':
+        sorted.sort((a, b) => b.blocks.compareTo(a.blocks));
+        break;
+      case 'aces':
+        sorted.sort((a, b) => b.aces.compareTo(a.aces));
+        break;
+      case 'servicePressure':
+        sorted.sort((a, b) => b.servicePressure.compareTo(a.servicePressure));
+        break;
+      case 'digs':
+        sorted.sort((a, b) => b.digs.compareTo(a.digs));
+        break;
+      case 'assists':
+        sorted.sort((a, b) => b.assists.compareTo(a.assists));
+        break;
+      case 'fbk':
+        sorted.sort((a, b) => b.fbk.compareTo(a.fbk));
+        break;
+      case 'jersey':
+        sorted.sort((a, b) => a.jerseyNumber.compareTo(b.jerseyNumber));
+        break;
+      default:
+        sorted.sort((a, b) => b.attackEfficiency.compareTo(a.attackEfficiency));
+    }
+    
+    return _ascending ? sorted.reversed.toList() : sorted;
   }
 }
 
@@ -219,91 +356,4 @@ class _RunningTotalRow extends StatelessWidget {
   }
 }
 
-class _RallyCard extends StatelessWidget {
-  const _RallyCard({required this.rally});
-
-  final RallyRecord rally;
-
-  @override
-  Widget build(BuildContext context) {
-    final isWin = rally.events.any((e) => e.type.isPointScoring);
-    final hasFBK = rally.events.any((e) => e.type == RallyActionTypes.firstBallKill);
-
-    return GlassLightContainer(
-      padding: const EdgeInsets.all(12),
-      borderRadius: BorderRadius.circular(8),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: isWin
-                  ? AppColors.emerald.withOpacity(0.2)
-                  : AppColors.rose.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Text(
-                rally.rallyNumber.toString(),
-                style: TextStyle(
-                  color: isWin ? AppColors.emerald : AppColors.rose,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Rally ${rally.rallyNumber}',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 4,
-                  children: [
-                    if (hasFBK)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.indigo.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          'FBK',
-                          style: TextStyle(
-                            color: AppColors.indigo,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ),
-                    ...rally.events.take(3).map((e) => Text(
-                          e.type.label,
-                          style: const TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 11,
-                          ),
-                        )),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            isWin ? Icons.check_circle : Icons.cancel,
-            color: isWin ? AppColors.emerald : AppColors.rose,
-          ),
-        ],
-      ),
-    );
-  }
-}
 

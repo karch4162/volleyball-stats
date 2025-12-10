@@ -11,3 +11,4 @@ alter table if exists roster_templates
   enable row level security;
 
 
+
