@@ -57,5 +57,10 @@ abstract class MatchSetupRepository {
     List<String>? opponentIds,
     String? seasonLabel,
   });
+
+  Future<Map<String, Map<String, int>>> fetchSetPlayerStats({
+    required String matchId,
+    required int setNumber,
+  });
 }
 

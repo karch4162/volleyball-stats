@@ -145,5 +145,16 @@ class CachedMatchSetupRepository implements MatchSetupRepository {
       seasonLabel: seasonLabel,
     );
   }
+
+  @override
+  Future<Map<String, Map<String, int>>> fetchSetPlayerStats({
+    required String matchId,
+    required int setNumber,
+  }) {
+    return _primary.fetchSetPlayerStats(
+      matchId: matchId,
+      setNumber: setNumber,
+    );
+  }
 }
 

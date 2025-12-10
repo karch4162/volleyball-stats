@@ -341,6 +341,22 @@ class OfflineMatchSetupRepository implements MatchSetupRepository {
       return {};
     }
   }
+
+  @override
+  Future<Map<String, Map<String, int>>> fetchSetPlayerStats({
+    required String matchId,
+    required int setNumber,
+  }) async {
+    try {
+      final client = getSupabaseClientOrNull();
+      if (client == null) {
+        return {};
+      }
+      return {}; // Would implement full query here
+    } catch (e) {
+      return {};
+    }
+  }
 }
 
 MatchPlayer _decodePlayer(Map<String, dynamic> map) {

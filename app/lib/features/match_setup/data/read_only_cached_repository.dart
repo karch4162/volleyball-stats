@@ -125,5 +125,14 @@ class ReadOnlyCachedRepository implements MatchSetupRepository {
     // Return empty map when offline - history requires Supabase connection
     return {};
   }
+
+  @override
+  Future<Map<String, Map<String, int>>> fetchSetPlayerStats({
+    required String matchId,
+    required int setNumber,
+  }) async {
+    // Return empty map when offline - history requires Supabase connection
+    return {};
+  }
 }
 

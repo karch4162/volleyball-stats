@@ -8,11 +8,13 @@ class PlayerPerformance {
     required this.kills,
     required this.errors,
     required this.attempts,
-    required this.attackEfficiency,
-    required this.killPercentage,
     required this.blocks,
     required this.aces,
-    required this.totalPoints,
+    required this.digs,
+    required this.assists,
+    required this.fbk,
+    required this.serveErrors,
+    required this.totalServes,
   });
 
   final String playerId;
@@ -21,11 +23,24 @@ class PlayerPerformance {
   final int kills;
   final int errors;
   final int attempts;
-  final double attackEfficiency;
-  final double killPercentage;
   final int blocks;
   final int aces;
-  final int totalPoints;
+  final int digs;
+  final int assists;
+  final int fbk;
+  final int serveErrors;
+  final int totalServes;
+
+  // Calculated properties
+  double get attackEfficiency => attempts > 0 ? (kills - errors) / attempts : 0.0;
+  double get killPercentage => attempts > 0 ? kills / attempts : 0.0;
+  double get acePercentage => totalServes > 0 ? aces / totalServes : 0.0;
+  double get servicePressure => totalServes > 0 ? (aces - serveErrors) / totalServes : 0.0;
+  int get totalPoints => kills + blocks + aces;
+  
+  // Formatted display strings
+  String get attackSummary => '$kills-$errors / $attempts (${(killPercentage * 100).toStringAsFixed(1)}%)';
+  String get serveSummary => '$aces-$serveErrors / $totalServes (${(acePercentage * 100).toStringAsFixed(1)}%)';
 
   factory PlayerPerformance.fromMap(Map<String, dynamic> map) {
     final kills = (map['kills'] as num?)?.toInt() ?? 0;
@@ -33,10 +48,12 @@ class PlayerPerformance {
     final attempts = (map['attempts'] as num?)?.toInt() ?? 0;
     final blocks = (map['blocks'] as num?)?.toInt() ?? 0;
     final aces = (map['aces'] as num?)?.toInt() ?? 0;
-
-    final attackEfficiency = attempts > 0 ? (kills - errors) / attempts : 0.0;
-    final killPercentage = attempts > 0 ? kills / attempts : 0.0;
-    final totalPoints = kills + blocks + aces;
+    final digs = (map['digs'] as num?)?.toInt() ?? 0;
+    final assists = (map['assists'] as num?)?.toInt() ?? 0;
+    final fbk = (map['fbk'] as num?)?.toInt() ?? 0;
+    final serveErrors = (map['serve_errors'] as num?)?.toInt() ?? 0;
+    final totalServes = (map['total_serves'] as num?)?.toInt() ?? 
+                        (aces + serveErrors); // Calculate if not provided
 
     return PlayerPerformance(
       playerId: map['player_id'] as String,
@@ -45,11 +62,13 @@ class PlayerPerformance {
       kills: kills,
       errors: errors,
       attempts: attempts,
-      attackEfficiency: attackEfficiency,
-      killPercentage: killPercentage,
       blocks: blocks,
       aces: aces,
-      totalPoints: totalPoints,
+      digs: digs,
+      assists: assists,
+      fbk: fbk,
+      serveErrors: serveErrors,
+      totalServes: totalServes,
     );
   }
 
@@ -60,11 +79,12 @@ class PlayerPerformance {
     required int attempts,
     required int blocks,
     required int aces,
+    int digs = 0,
+    int assists = 0,
+    int fbk = 0,
+    int serveErrors = 0,
+    int? totalServes,
   }) {
-    final attackEfficiency = attempts > 0 ? (kills - errors) / attempts : 0.0;
-    final killPercentage = attempts > 0 ? kills / attempts : 0.0;
-    final totalPoints = kills + blocks + aces;
-
     return PlayerPerformance(
       playerId: player.id,
       playerName: player.name,
@@ -72,11 +92,13 @@ class PlayerPerformance {
       kills: kills,
       errors: errors,
       attempts: attempts,
-      attackEfficiency: attackEfficiency,
-      killPercentage: killPercentage,
       blocks: blocks,
       aces: aces,
-      totalPoints: totalPoints,
+      digs: digs,
+      assists: assists,
+      fbk: fbk,
+      serveErrors: serveErrors,
+      totalServes: totalServes ?? (aces + serveErrors),
     );
   }
 }

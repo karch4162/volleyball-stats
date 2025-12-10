@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../match_setup/models/match_player.dart';
 import '../match_setup/providers.dart';
 import '../teams/team_providers.dart';
 import 'models/match_summary.dart';
@@ -8,6 +9,30 @@ import 'models/set_summary.dart';
 import 'models/player_performance.dart';
 import 'models/kpi_summary.dart';
 import 'utils/analytics_calculator.dart';
+
+/// Helper function to build PlayerPerformance list from roster and stats map
+List<PlayerPerformance> _buildPlayerPerformances(
+  List<MatchPlayer> roster,
+  Map<String, Map<String, int>> statsMap,
+) {
+  return roster.map((player) {
+    final stats = statsMap[player.id] ?? {};
+    
+    return PlayerPerformance.fromPlayerStats(
+      player: player,
+      kills: stats['kills'] ?? 0,
+      errors: stats['errors'] ?? 0,
+      attempts: stats['attempts'] ?? 0,
+      blocks: stats['blocks'] ?? 0,
+      aces: stats['aces'] ?? 0,
+      digs: stats['digs'] ?? 0,
+      assists: stats['assists'] ?? 0,
+      fbk: stats['fbk'] ?? 0,
+      serveErrors: stats['serve_errors'] ?? 0,
+      totalServes: stats['total_serves'],
+    );
+  }).toList();
+}
 
 /// Provider for match summaries (history list)
 final matchSummariesProvider = FutureProvider.family<List<MatchSummary>, MatchSummariesParams>(
@@ -61,6 +86,50 @@ class MatchSummariesParams {
         opponent,
         seasonLabel,
       );
+}
+
+/// Provider for set-level player statistics
+final setPlayerStatsProvider = FutureProvider.family<List<PlayerPerformance>, SetPlayerStatsParams>(
+  (ref, params) async {
+    final repository = ref.watch(matchSetupRepositoryProvider);
+    final rosterAsync = ref.watch(matchSetupRosterProvider);
+    
+    // Wait for roster to be available
+    if (!rosterAsync.hasValue || rosterAsync.value == null) {
+      return [];
+    }
+    
+    final roster = rosterAsync.value!;
+    
+    // Fetch set-level player stats
+    final statsMap = await repository.fetchSetPlayerStats(
+      matchId: params.matchId,
+      setNumber: params.setNumber,
+    );
+    
+    return _buildPlayerPerformances(roster, statsMap);
+  },
+);
+
+class SetPlayerStatsParams {
+  SetPlayerStatsParams({
+    required this.matchId,
+    required this.setNumber,
+  });
+
+  final String matchId;
+  final int setNumber;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is SetPlayerStatsParams &&
+        other.matchId == matchId &&
+        other.setNumber == setNumber;
+  }
+
+  @override
+  int get hashCode => Object.hash(matchId, setNumber);
 }
 
 /// Provider for match details (full match recap)

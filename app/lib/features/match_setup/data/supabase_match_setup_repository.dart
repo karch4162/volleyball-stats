@@ -558,6 +558,8 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
                 'blocks': 0,
                 'aces': 0,
                 'serve_errors': 0,
+                'digs': 0,
+                'assists': 0,
                 'fbk': 0,
               };
             }
@@ -603,6 +605,16 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
                       (playerStats[playerId]!['serve_errors'] ?? 0) + 1;
                 }
               }
+            } else if (actionType == 'dig') {
+              if (playerId != null) {
+                playerStats[playerId]!['digs'] =
+                    (playerStats[playerId]!['digs'] ?? 0) + 1;
+              }
+            } else if (actionType == 'assist') {
+              if (playerId != null) {
+                playerStats[playerId]!['assists'] =
+                    (playerStats[playerId]!['assists'] ?? 0) + 1;
+              }
             }
 
             // Check for FBK and transition points
@@ -644,6 +656,109 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
       'total_serves': totalServes,
       'player_stats': playerStats,
     };
+  }
+
+  @override
+  Future<Map<String, Map<String, int>>> fetchSetPlayerStats({
+    required String matchId,
+    required int setNumber,
+  }) async {
+    if (_currentUserId == null) {
+      throw Exception('User must be authenticated to fetch set player stats');
+    }
+
+    try {
+      // Fetch the specific set with all actions
+      final setResult = await _client
+          .from('sets')
+          .select('''
+            id,
+            rallies:rallies(
+              id,
+              actions:actions(*)
+            )
+          ''')
+          .eq('match_id', matchId)
+          .eq('set_number', setNumber)
+          .maybeSingle();
+
+      if (setResult == null) {
+        return {};
+      }
+
+      final setData = setResult as Map<String, dynamic>;
+      final rallies = (setData['rallies'] as List<dynamic>?) ?? [];
+      
+      final playerStats = <String, Map<String, int>>{};
+
+      for (final rally in rallies) {
+        final rallyData = rally as Map<String, dynamic>;
+        final actions = (rallyData['actions'] as List<dynamic>?) ?? [];
+
+        for (final action in actions) {
+          final actionData = action as Map<String, dynamic>;
+          final playerId = actionData['player_id'] as String?;
+          final actionType = actionData['action_type'] as String?;
+          final actionSubtype = actionData['action_subtype'] as String?;
+          final outcome = actionData['outcome'] as String?;
+
+          if (playerId == null) continue;
+
+          // Initialize player stats if needed
+          if (!playerStats.containsKey(playerId)) {
+            playerStats[playerId] = {
+              'kills': 0,
+              'errors': 0,
+              'attempts': 0,
+              'blocks': 0,
+              'aces': 0,
+              'serve_errors': 0,
+              'digs': 0,
+              'assists': 0,
+              'fbk': 0,
+              'total_serves': 0,
+            };
+          }
+
+          final stats = playerStats[playerId]!;
+
+          // Count stats by action type
+          if (actionType == 'attack') {
+            stats['attempts'] = (stats['attempts'] ?? 0) + 1;
+            if (actionSubtype == 'kill') {
+              stats['kills'] = (stats['kills'] ?? 0) + 1;
+            } else if (actionSubtype == 'error') {
+              stats['errors'] = (stats['errors'] ?? 0) + 1;
+            }
+          } else if (actionType == 'block') {
+            stats['blocks'] = (stats['blocks'] ?? 0) + 1;
+          } else if (actionType == 'serve') {
+            stats['total_serves'] = (stats['total_serves'] ?? 0) + 1;
+            if (actionSubtype == 'ace') {
+              stats['aces'] = (stats['aces'] ?? 0) + 1;
+            } else if (actionSubtype == 'error') {
+              stats['serve_errors'] = (stats['serve_errors'] ?? 0) + 1;
+            }
+          } else if (actionType == 'dig') {
+            stats['digs'] = (stats['digs'] ?? 0) + 1;
+          } else if (actionType == 'assist') {
+            stats['assists'] = (stats['assists'] ?? 0) + 1;
+          }
+
+          // Check for FBK
+          if (outcome == 'first_ball_kill' || actionSubtype == 'first_ball_kill') {
+            stats['fbk'] = (stats['fbk'] ?? 0) + 1;
+          }
+        }
+      }
+
+      return playerStats;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching set player stats: $e');
+      }
+      return {};
+    }
   }
 }
 

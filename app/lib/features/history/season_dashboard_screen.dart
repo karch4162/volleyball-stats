@@ -57,6 +57,10 @@ class _SeasonDashboardScreenState extends ConsumerState<SeasonDashboardScreen> {
                       attempts: playerStat['attempts'] ?? 0,
                       blocks: playerStat['blocks'] ?? 0,
                       aces: playerStat['aces'] ?? 0,
+                      digs: playerStat['digs'] ?? 0,
+                      assists: playerStat['assists'] ?? 0,
+                      fbk: playerStat['fbk'] ?? 0,
+                      serveErrors: playerStat['serve_errors'] ?? 0,
                     );
                   })
                   .whereType<PlayerPerformance>()

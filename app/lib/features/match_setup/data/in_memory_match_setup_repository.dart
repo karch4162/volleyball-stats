@@ -127,5 +127,13 @@ class InMemoryMatchSetupRepository implements MatchSetupRepository {
   }) async {
     return {};
   }
+
+  @override
+  Future<Map<String, Map<String, int>>> fetchSetPlayerStats({
+    required String matchId,
+    required int setNumber,
+  }) async {
+    return {};
+  }
 }
 

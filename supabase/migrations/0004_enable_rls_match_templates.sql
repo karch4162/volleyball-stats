@@ -10,3 +10,4 @@ alter table if exists match_drafts
 alter table if exists roster_templates
   enable row level security;
 
+
