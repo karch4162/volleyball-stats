@@ -2,8 +2,11 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
+import '../../core/utils/logger.dart';
 import '../rally_capture/models/rally_models.dart';
 import '../match_setup/models/match_player.dart';
+
+final _logger = createLogger('CSVExportService');
 
 /// Service for exporting data to CSV format
 class CsvExportService {
@@ -105,7 +108,7 @@ class CsvExportService {
     String fileExtension = 'csv',
   }) async {
     final directory = Directory.systemTemp;
-    final file = File('${directory.path}/${filename}.$fileExtension');
+    final file = File('${directory.path}/$filename.$fileExtension');
     
     await file.writeAsString(csvContent);
     return file;
@@ -123,8 +126,8 @@ class CsvExportService {
       filename: '${filename}_export',
     );
     
-    print('CSV exported to: ${file.path}');
-    print('You can share this file with your preferred method');
+    _logger.i('CSV exported to: ${file.path}');
+    _logger.i('You can share this file with your preferred method');
   }
 
   String _buildCsvHeader() {

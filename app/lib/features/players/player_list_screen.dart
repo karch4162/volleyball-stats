@@ -33,7 +33,7 @@ class PlayerListScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.info_outline,
                       size: 64,
                       color: AppColors.textMuted,
@@ -107,7 +107,7 @@ class PlayerListScreen extends ConsumerWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.people_outline,
                             size: 64,
                             color: AppColors.textMuted,
@@ -176,7 +176,7 @@ class PlayerListScreen extends ConsumerWidget {
                               child: Center(
                                 child: Text(
                                   '${player.jerseyNumber}',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.indigo,
@@ -208,7 +208,7 @@ class PlayerListScreen extends ConsumerWidget {
                                 ],
                               ),
                             ),
-                            Icon(
+                            const Icon(
                               Icons.chevron_right,
                               color: AppColors.textMuted,
                             ),

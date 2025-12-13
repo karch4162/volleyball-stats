@@ -118,7 +118,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           ],
                         ),
                       ),
-                    Icon(
+                    const Icon(
                       Icons.sports_volleyball,
                       size: 64,
                       color: AppColors.indigo,

@@ -168,7 +168,7 @@ class _SeasonDashboardScreenState extends ConsumerState<SeasonDashboardScreen> {
                     ],
 
                     // Match trends (placeholder)
-                    MatchTrendsChart(matches: []),
+                    const MatchTrendsChart(matches: []),
                   ],
                 ),
               );
@@ -186,7 +186,7 @@ class _SeasonDashboardScreenState extends ConsumerState<SeasonDashboardScreen> {
                     color: AppColors.rose,
                   ),
                   const SizedBox(height: 16),
-                  Text(
+                  const Text(
                     'Error loading roster',
                     style: TextStyle(
                       color: AppColors.textPrimary,
@@ -228,7 +228,7 @@ class _SeasonDashboardScreenState extends ConsumerState<SeasonDashboardScreen> {
                 color: AppColors.rose,
               ),
               const SizedBox(height: 16),
-              Text(
+              const Text(
                 'Error loading season stats',
                 style: TextStyle(
                   color: AppColors.textPrimary,

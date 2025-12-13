@@ -249,7 +249,7 @@ class _RotationPosition extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           if (isEmpty)
-            Icon(
+            const Icon(
               Icons.add_rounded,
               color: AppColors.textMuted,
               size: 24,

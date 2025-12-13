@@ -2,8 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/providers/supabase_client_provider.dart';
+import '../../core/utils/logger.dart';
 import '../auth/auth_provider.dart';
 import 'models/team.dart';
+
+final _logger = createLogger('TeamProviders');
 
 /// Provider that fetches all teams for the current authenticated coach
 final coachTeamsProvider = FutureProvider<List<Team>>((ref) async {
@@ -15,21 +18,20 @@ final coachTeamsProvider = FutureProvider<List<Team>>((ref) async {
   }
 
   try {
-    print('Fetching teams for coach: $userId');
+    _logger.d('Fetching teams for coach: $userId');
     final response = await client
         .from('teams')
         .select()
         .eq('coach_id', userId)
         .order('name');
 
-    print('Teams query response: $response');
+    _logger.d('Teams query response: $response');
     final rows = (response as List<dynamic>).cast<Map<String, dynamic>>();
     final teams = rows.map((row) => Team.fromMap(row)).toList();
-    print('Parsed ${teams.length} teams');
+    _logger.i('Parsed ${teams.length} teams');
     return teams;
   } catch (e, stackTrace) {
-    print('Error fetching teams: $e');
-    print('Stack trace: $stackTrace');
+    _logger.e('Error fetching teams', error: e, stackTrace: stackTrace);
     rethrow; // Re-throw so the FutureProvider can handle the error
   }
 });
@@ -80,14 +82,14 @@ class TeamService {
       throw Exception('Supabase client not initialized');
     }
 
-    final response = await _client!.from('teams').insert({
+    final response = await _client.from('teams').insert({
       'name': name,
       'level': level,
       'season_label': seasonLabel,
       'coach_id': coachId,
     }).select().single();
 
-    return Team.fromMap(response as Map<String, dynamic>);
+    return Team.fromMap(response);
   }
 
   /// Update an existing team
@@ -106,14 +108,14 @@ class TeamService {
     if (level != null) updates['level'] = level;
     if (seasonLabel != null) updates['season_label'] = seasonLabel;
 
-    final response = await _client!
+    final response = await _client
         .from('teams')
         .update(updates)
         .eq('id', teamId)
         .select()
         .single();
 
-    return Team.fromMap(response as Map<String, dynamic>);
+    return Team.fromMap(response);
   }
 
   /// Delete a team
@@ -122,7 +124,7 @@ class TeamService {
       throw Exception('Supabase client not initialized');
     }
 
-    await _client!.from('teams').delete().eq('id', teamId);
+    await _client.from('teams').delete().eq('id', teamId);
   }
 }
 

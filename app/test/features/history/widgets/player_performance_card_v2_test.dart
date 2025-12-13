@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:volleyball_stats_app/core/theme/app_colors.dart';
 import 'package:volleyball_stats_app/features/history/models/player_performance.dart';
 import 'package:volleyball_stats_app/features/history/widgets/player_performance_card_v2.dart';
 import 'package:volleyball_stats_app/features/match_setup/models/match_player.dart';
@@ -10,7 +9,7 @@ void main() {
     late PlayerPerformance testPerformance;
 
     setUp(() {
-      final player = MatchPlayer(
+      const player = MatchPlayer(
         id: '1',
         name: 'Test Player',
         jerseyNumber: 10,
@@ -63,7 +62,7 @@ void main() {
     });
 
     testWidgets('shows "Did not play" for player with no stats', (tester) async {
-      final player = MatchPlayer(
+      const player = MatchPlayer(
         id: '2',
         name: 'Bench Player',
         jerseyNumber: 99,
@@ -230,7 +229,7 @@ void main() {
     });
 
     testWidgets('does not display sections with no stats', (tester) async {
-      final player = MatchPlayer(
+      const player = MatchPlayer(
         id: '3',
         name: 'Defensive Specialist',
         jerseyNumber: 7,
@@ -302,7 +301,7 @@ void main() {
     });
 
     testWidgets('does not allow tap when player has no stats', (tester) async {
-      final player = MatchPlayer(
+      const player = MatchPlayer(
         id: '2',
         name: 'Bench Player',
         jerseyNumber: 99,

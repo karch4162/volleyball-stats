@@ -131,8 +131,8 @@ class StreamlinedSetupBody extends StatelessWidget {
             ),
           ),
           if (!hasValidRoster && selectedPlayerIds.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
               child: Text(
                 'Select at least 6 players',
                 style: TextStyle(
@@ -170,8 +170,8 @@ class StreamlinedSetupBody extends StatelessWidget {
               ),
             ),
           if (!hasValidRotation && selectedPlayers.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
               child: Text(
                 'Assign all 6 rotation positions',
                 style: TextStyle(

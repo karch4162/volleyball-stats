@@ -95,7 +95,7 @@ class _TeamCreateScreenState extends ConsumerState<TeamCreateScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.sports_volleyball,
                         size: 64,
                         color: AppColors.indigo,

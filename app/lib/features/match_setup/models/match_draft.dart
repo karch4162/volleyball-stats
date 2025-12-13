@@ -16,7 +16,7 @@ class MatchDraft {
   final Map<int, String> startingRotation;
 
   factory MatchDraft.initial() {
-    return MatchDraft(
+    return const MatchDraft(
       opponent: '',
       matchDate: null,
       location: '',

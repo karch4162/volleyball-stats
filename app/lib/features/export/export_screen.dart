@@ -181,10 +181,10 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
             ),
             const SizedBox(height: 8),
             if (state.isExporting) ...[
-              Row(
+              const Row(
                 children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(width: 8),
+                  CircularProgressIndicator(),
+                  SizedBox(width: 8),
                   Text('Exporting data...'),
                 ],
               ),

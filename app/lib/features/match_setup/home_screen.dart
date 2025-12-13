@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/logger.dart';
 import '../../core/widgets/glass_container.dart';
 import '../auth/auth_provider.dart';
 import '../auth/auth_service.dart';
@@ -11,6 +12,8 @@ import '../teams/team_providers.dart';
 import '../teams/team_selection_screen.dart';
 import 'match_setup_landing_screen.dart';
 import 'providers.dart';
+
+final _logger = createLogger('HomeScreen');
 
 /// Home screen that shows team selection or match setup landing
 class HomeScreen extends ConsumerWidget {
@@ -153,13 +156,13 @@ class HomeScreen extends ConsumerWidget {
                         }
                       },
                       itemBuilder: (context) => [
-                        PopupMenuItem(
+                        const PopupMenuItem(
                           value: 'logout',
                           child: Row(
                             children: [
-                              const Icon(Icons.logout, size: 20),
-                              const SizedBox(width: 8),
-                              const Text('Sign Out'),
+                              Icon(Icons.logout, size: 20),
+                              SizedBox(width: 8),
+                              Text('Sign Out'),
                             ],
                           ),
                         ),
@@ -179,7 +182,7 @@ class HomeScreen extends ConsumerWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.group_outlined,
                             size: 64,
                             color: AppColors.textMuted,
@@ -250,8 +253,7 @@ class HomeScreen extends ConsumerWidget {
           body: Center(child: CircularProgressIndicator()),
         ),
         error: (error, stack) {
-          print('HomeScreen: Error state - $error');
-          print('HomeScreen: Stack trace - $stack');
+          _logger.e('HomeScreen: Error state', error: error, stackTrace: stack);
           return Scaffold(
             appBar: AppBar(title: const Text('Error Loading Teams')),
             body: Container(

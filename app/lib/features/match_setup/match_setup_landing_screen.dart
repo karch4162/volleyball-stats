@@ -275,7 +275,7 @@ class _MatchSetupLandingScreenState extends ConsumerState<MatchSetupLandingScree
                 if (draft == null) {
                   return const SizedBox.shrink();
                 }
-                final matchDraft = draft as MatchDraft;
+                final matchDraft = draft;
                 return _QuickStartCard(
                   icon: Icons.history_rounded,
                   title: 'Use Last Match Setup',
@@ -604,7 +604,9 @@ class _MatchSetupLandingScreenState extends ConsumerState<MatchSetupLandingScree
         templateId: selected.id,
       );
 
-      _navigateToSetup(context, ref, template: selected);
+      if (context.mounted) {
+        _navigateToSetup(context, ref, template: selected);
+      }
     }
   }
 
@@ -684,7 +686,7 @@ class _QuickStartCard extends StatelessWidget {
               ],
             ),
           ),
-          Icon(
+          const Icon(
             Icons.chevron_right_rounded,
             color: AppColors.textMuted,
           ),

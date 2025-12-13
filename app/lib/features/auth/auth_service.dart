@@ -18,7 +18,7 @@ class AuthService {
       throw Exception('Supabase client not initialized');
     }
     
-    return await _client!.auth.signInWithPassword(
+    return await _client.auth.signInWithPassword(
       email: email,
       password: password,
     );
@@ -33,7 +33,7 @@ class AuthService {
       throw Exception('Supabase client not initialized');
     }
     
-    return await _client!.auth.signUp(
+    return await _client.auth.signUp(
       email: email,
       password: password,
     );
@@ -45,7 +45,7 @@ class AuthService {
       throw Exception('Supabase client not initialized');
     }
     
-    await _client!.auth.signOut();
+    await _client.auth.signOut();
   }
 
   /// Reset password
@@ -54,7 +54,7 @@ class AuthService {
       throw Exception('Supabase client not initialized');
     }
     
-    await _client!.auth.resetPasswordForEmail(email);
+    await _client.auth.resetPasswordForEmail(email);
   }
 
   /// Get current session

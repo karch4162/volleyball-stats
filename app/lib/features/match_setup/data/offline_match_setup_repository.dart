@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import '../../../core/utils/logger.dart';
 import '../models/match_draft.dart';
 import '../models/match_player.dart';
 import '../models/roster_template.dart';
 import 'match_setup_repository.dart';
 import '../../../core/supabase.dart';
+
+final _logger = createLogger('OfflineMatchSetupRepo');
 
 /// Simple repository that works directly with Supabase when online
 class OfflineMatchSetupRepository implements MatchSetupRepository {
@@ -48,7 +51,7 @@ class OfflineMatchSetupRepository implements MatchSetupRepository {
       
     } catch (e) {
       // Save locally if Supabase fails
-      print('Failed to save to Supabase: $e');
+      _logger.w('Failed to save draft to Supabase', error: e);
     }
   }
 
@@ -67,7 +70,7 @@ class OfflineMatchSetupRepository implements MatchSetupRepository {
           .maybeSingle();
       
       if (response != null) {
-        return MatchDraft.fromMap(response as Map<String, dynamic>);
+        return MatchDraft.fromMap(response);
       }
     } catch (e) {
       return null;
@@ -122,7 +125,7 @@ class OfflineMatchSetupRepository implements MatchSetupRepository {
       
       await client.from('players').upsert(playerData);
     } catch (e) {
-      print('Failed to save player to Supabase: $e');
+      _logger.w('Failed to save player to Supabase', error: e);
     }
   }
 
@@ -147,7 +150,7 @@ class OfflineMatchSetupRepository implements MatchSetupRepository {
       
       await client.from('players').upsert(playerData);
     } catch (e) {
-      print('Failed to save players to Supabase: $e');
+      _logger.w('Failed to save players to Supabase', error: e);
     }
   }
 
@@ -166,9 +169,9 @@ class OfflineMatchSetupRepository implements MatchSetupRepository {
       final players = (response as List).map((map) => _decodePlayer(map as Map<String, dynamic>)).toList();
       
       // TODO: Save to local storage when implementing offline capability
-      print('Synced ${players.length} players from Supabase');
+      _logger.i('Synced ${players.length} players from Supabase');
     } catch (e) {
-      print('Failed to sync players from Supabase: $e');
+      _logger.w('Failed to sync players from Supabase', error: e);
     }
   }
 
@@ -187,7 +190,7 @@ class OfflineMatchSetupRepository implements MatchSetupRepository {
           .lt('created_at', cutoffDate.toIso8601String());
           
     } catch (e) {
-      print('Failed to clean old data: $e');
+      _logger.w('Failed to clean old draft data', error: e);
     }
   }
 
@@ -210,7 +213,7 @@ class OfflineMatchSetupRepository implements MatchSetupRepository {
       final rows = (response as List).cast<Map<String, dynamic>>();
       return rows.map((row) => RosterTemplate.fromMap(row)).toList();
     } catch (e) {
-      print('Failed to load roster templates: $e');
+      _logger.e('Failed to load roster templates', error: e);
       return [];
     }
   }
@@ -234,7 +237,7 @@ class OfflineMatchSetupRepository implements MatchSetupRepository {
 
       await client.from('roster_templates').upsert(payload, onConflict: 'id');
     } catch (e) {
-      print('Failed to save roster template: $e');
+      _logger.e('Failed to save roster template', error: e);
     }
   }
 
@@ -255,7 +258,7 @@ class OfflineMatchSetupRepository implements MatchSetupRepository {
           .eq('id', templateId)
           .eq('team_id', teamId);
     } catch (e) {
-      print('Failed to delete roster template: $e');
+      _logger.e('Failed to delete roster template', error: e);
     }
   }
 
@@ -278,12 +281,12 @@ class OfflineMatchSetupRepository implements MatchSetupRepository {
           .maybeSingle();
 
       if (template != null) {
-        final currentTemplate = RosterTemplate.fromMap(template as Map<String, dynamic>);
+        final currentTemplate = RosterTemplate.fromMap(template);
         final updated = currentTemplate.markUsed();
         await saveRosterTemplate(teamId: teamId, template: updated);
       }
     } catch (e) {
-      print('Failed to update template usage: $e');
+      _logger.w('Failed to update template usage', error: e);
     }
   }
 

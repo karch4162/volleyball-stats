@@ -110,7 +110,7 @@ class _PlayerCreateScreenState extends ConsumerState<PlayerCreateScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.info_outline,
                       size: 64,
                       color: AppColors.textMuted,
@@ -170,7 +170,7 @@ class _PlayerCreateScreenState extends ConsumerState<PlayerCreateScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.person_add,
                         size: 64,
                         color: AppColors.indigo,

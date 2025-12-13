@@ -40,23 +40,23 @@ class AuthGuard extends ConsumerWidget {
       if (kDebugMode) {
         debugPrint('[AuthGuard] Showing Supabase Not Connected screen');
       }
-      return Scaffold(
+      return const Scaffold(
         backgroundColor: AppColors.background,
         body: SafeArea(
           child: Center(
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: EdgeInsets.all(24.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.cloud_off_outlined,
                     size: 64,
                     color: Colors.orange,
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
+                  SizedBox(height: 16),
+                  Text(
                     'Supabase Not Connected',
                     style: TextStyle(
                       color: AppColors.textPrimary,
@@ -65,8 +65,8 @@ class AuthGuard extends ConsumerWidget {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
+                  SizedBox(height: 16),
+                  Text(
                     'Please configure SUPABASE_API_URL and SUPABASE_ANON_KEY in your .env file.\n\n'
                     'Create a .env file in the app/ directory with:\n'
                     'SUPABASE_API_URL=https://your-project.supabase.co\n'

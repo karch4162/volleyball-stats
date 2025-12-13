@@ -34,7 +34,7 @@ class CacheStatusIndicator extends ConsumerWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.rose.withOpacity(0.3)),
         ),
-        child: Row(
+        child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
@@ -42,7 +42,7 @@ class CacheStatusIndicator extends ConsumerWidget {
               size: 16,
               color: AppColors.rose,
             ),
-            const SizedBox(width: 6),
+            SizedBox(width: 6),
             Text(
               'Offline',
               style: TextStyle(
@@ -64,7 +64,7 @@ class CacheStatusIndicator extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.indigo.withOpacity(0.3)),
       ),
-      child: Row(
+      child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
@@ -72,7 +72,7 @@ class CacheStatusIndicator extends ConsumerWidget {
             size: 16,
             color: AppColors.indigo,
           ),
-          const SizedBox(width: 6),
+          SizedBox(width: 6),
           Text(
             'Viewing cached data',
             style: TextStyle(

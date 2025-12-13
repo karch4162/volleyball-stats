@@ -517,7 +517,7 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
 
   Future<void> _showTemplatePicker(BuildContext context, WidgetRef ref) async {
     final templatesAsync = ref.read(rosterTemplatesDefaultProvider);
-    final templates = await templatesAsync.when(
+    final templates = templatesAsync.when(
       data: (templates) => templates,
       loading: () => <RosterTemplate>[],
       error: (_, __) => <RosterTemplate>[],
@@ -549,9 +549,9 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
   Future<void> _applyLastDraft(WidgetRef ref) async {
     final lastDraftAsync = ref.read(lastMatchDraftProvider);
     MatchDraft? draft;
-    await lastDraftAsync.when(
+    lastDraftAsync.when(
       data: (d) {
-        draft = d as MatchDraft?;
+        draft = d;
       },
       loading: () {},
       error: (_, __) {},

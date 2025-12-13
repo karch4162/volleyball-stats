@@ -209,9 +209,9 @@ class _SetDashboardScreenState extends ConsumerState<SetDashboardScreen> {
                       color: AppColors.rose,
                     ),
                     const SizedBox(height: 12),
-                    Text(
+                    const Text(
                       'Error loading player stats',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,

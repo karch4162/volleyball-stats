@@ -40,13 +40,13 @@ class TeamListScreen extends ConsumerWidget {
                 }
               },
               itemBuilder: (context) => [
-                PopupMenuItem(
+                const PopupMenuItem(
                   value: 'logout',
                   child: Row(
                     children: [
-                      const Icon(Icons.logout, size: 20),
-                      const SizedBox(width: 8),
-                      const Text('Sign Out'),
+                      Icon(Icons.logout, size: 20),
+                      SizedBox(width: 8),
+                      Text('Sign Out'),
                     ],
                   ),
                 ),
@@ -69,7 +69,7 @@ class TeamListScreen extends ConsumerWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.group_outlined,
                           size: 64,
                           color: AppColors.textMuted,
@@ -135,7 +135,7 @@ class TeamListScreen extends ConsumerWidget {
                               color: AppColors.indigo.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Icon(
+                            child: const Icon(
                               Icons.sports_volleyball,
                               color: AppColors.indigo,
                             ),
@@ -167,7 +167,7 @@ class TeamListScreen extends ConsumerWidget {
                               ],
                             ),
                           ),
-                          Icon(
+                          const Icon(
                             Icons.chevron_right,
                             color: AppColors.textMuted,
                           ),

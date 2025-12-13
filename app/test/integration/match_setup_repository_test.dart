@@ -90,7 +90,7 @@ void main() {
         .from('match_drafts')
         .select()
         .eq('match_id', matchId)
-        .maybeSingle() as Map<String, dynamic>?;
+        .maybeSingle();
     expect(remoteDraft, isNotNull);
     expect(remoteDraft!['opponent'], equals('Integration Opponent'));
 

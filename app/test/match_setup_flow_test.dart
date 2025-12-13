@@ -7,12 +7,11 @@ import 'package:volleyball_stats_app/features/match_setup/models/match_player.da
 import 'package:volleyball_stats_app/features/match_setup/providers.dart';
 
 Future<void> _configureLargeWindow(WidgetTester tester) async {
-  final binding = TestWidgetsFlutterBinding.ensureInitialized();
-  binding.window.physicalSizeTestValue = const Size(1080, 1920);
-  binding.window.devicePixelRatioTestValue = 1.0;
+  tester.view.physicalSize = const Size(1080, 1920);
+  tester.view.devicePixelRatio = 1.0;
   addTearDown(() {
-    binding.window.clearPhysicalSizeTestValue();
-    binding.window.clearDevicePixelRatioTestValue();
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
   });
 }
 

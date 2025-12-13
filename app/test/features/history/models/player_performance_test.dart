@@ -6,7 +6,7 @@ void main() {
   group('PlayerPerformance', () {
     group('Calculated Properties', () {
       test('attackEfficiency calculates correctly with attempts', () {
-        final player = MatchPlayer(
+        const player = MatchPlayer(
           id: '1',
           name: 'Test Player',
           jerseyNumber: 10,
@@ -27,7 +27,7 @@ void main() {
       });
 
       test('attackEfficiency returns 0 when no attempts', () {
-        final player = MatchPlayer(
+        const player = MatchPlayer(
           id: '1',
           name: 'Test Player',
           jerseyNumber: 10,
@@ -47,7 +47,7 @@ void main() {
       });
 
       test('killPercentage calculates correctly', () {
-        final player = MatchPlayer(
+        const player = MatchPlayer(
           id: '1',
           name: 'Test Player',
           jerseyNumber: 10,
@@ -68,7 +68,7 @@ void main() {
       });
 
       test('acePercentage calculates correctly', () {
-        final player = MatchPlayer(
+        const player = MatchPlayer(
           id: '1',
           name: 'Test Player',
           jerseyNumber: 10,
@@ -91,7 +91,7 @@ void main() {
       });
 
       test('servicePressure calculates correctly with positive pressure', () {
-        final player = MatchPlayer(
+        const player = MatchPlayer(
           id: '1',
           name: 'Test Player',
           jerseyNumber: 10,
@@ -114,7 +114,7 @@ void main() {
       });
 
       test('servicePressure calculates correctly with negative pressure', () {
-        final player = MatchPlayer(
+        const player = MatchPlayer(
           id: '1',
           name: 'Test Player',
           jerseyNumber: 10,
@@ -137,7 +137,7 @@ void main() {
       });
 
       test('servicePressure returns 0 when no serves', () {
-        final player = MatchPlayer(
+        const player = MatchPlayer(
           id: '1',
           name: 'Test Player',
           jerseyNumber: 10,
@@ -159,7 +159,7 @@ void main() {
       });
 
       test('totalPoints calculates correctly', () {
-        final player = MatchPlayer(
+        const player = MatchPlayer(
           id: '1',
           name: 'Test Player',
           jerseyNumber: 10,
@@ -182,7 +182,7 @@ void main() {
 
     group('Formatted Display Strings', () {
       test('attackSummary formats correctly', () {
-        final player = MatchPlayer(
+        const player = MatchPlayer(
           id: '1',
           name: 'Test Player',
           jerseyNumber: 10,
@@ -202,7 +202,7 @@ void main() {
       });
 
       test('serveSummary formats correctly', () {
-        final player = MatchPlayer(
+        const player = MatchPlayer(
           id: '1',
           name: 'Test Player',
           jerseyNumber: 10,
@@ -226,7 +226,7 @@ void main() {
 
     group('Factory Constructors', () {
       test('fromPlayerStats creates instance with all fields', () {
-        final player = MatchPlayer(
+        const player = MatchPlayer(
           id: '123',
           name: 'Jane Doe',
           jerseyNumber: 15,
@@ -263,7 +263,7 @@ void main() {
       });
 
       test('fromPlayerStats uses default values for optional fields', () {
-        final player = MatchPlayer(
+        const player = MatchPlayer(
           id: '123',
           name: 'Jane Doe',
           jerseyNumber: 15,
@@ -362,7 +362,7 @@ void main() {
 
     group('Edge Cases', () {
       test('handles player with no stats (did not play)', () {
-        final player = MatchPlayer(
+        const player = MatchPlayer(
           id: '1',
           name: 'Bench Player',
           jerseyNumber: 99,
@@ -384,7 +384,7 @@ void main() {
       });
 
       test('handles extremely high efficiency (all kills, no errors)', () {
-        final player = MatchPlayer(
+        const player = MatchPlayer(
           id: '1',
           name: 'Perfect Player',
           jerseyNumber: 1,
@@ -405,7 +405,7 @@ void main() {
       });
 
       test('handles negative efficiency (more errors than kills)', () {
-        final player = MatchPlayer(
+        const player = MatchPlayer(
           id: '1',
           name: 'Struggling Player',
           jerseyNumber: 2,

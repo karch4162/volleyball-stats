@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/utils/logger.dart';
 import '../match_setup/constants.dart';
 import '../match_setup/models/match_draft.dart';
 import '../match_setup/models/match_player.dart';
@@ -8,6 +9,8 @@ import '../match_setup/providers.dart';
 import '../teams/team_providers.dart';
 import 'models/rally_models.dart';
 import 'data/rally_sync_repository.dart';
+
+final _logger = createLogger('RallyCaptureProviders');
 
 class RallyCaptureState {
   RallyCaptureState({
@@ -64,7 +67,7 @@ final currentLineupProvider = StateNotifierProvider.family<CurrentLineupNotifier
 });
 
 class CurrentLineupNotifier extends StateNotifier<CurrentLineup> {
-  CurrentLineupNotifier(CurrentLineup initial) : super(initial);
+  CurrentLineupNotifier(super.initial);
 
   /// Perform a substitution: swap outgoing player with incoming player
   void substitute(MatchPlayer outgoing, MatchPlayer incoming) {
@@ -285,7 +288,7 @@ class RallyCaptureSessionController extends StateNotifier<RallyCaptureSession> {
       );
     } catch (e) {
       // Log error but don't fail the operation - rally stays in local state
-      print('Failed to sync rally: $e');
+      _logger.w('Failed to sync rally', error: e);
     }
 
     _updateState(

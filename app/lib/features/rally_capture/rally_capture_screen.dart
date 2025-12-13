@@ -365,14 +365,6 @@ class _CustomAppBar extends ConsumerWidget {
               ),
             ),
             PopupMenuButton<String>(
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.more_vert_rounded, size: 20, color: AppColors.textTertiary),
-              ),
               color: AppColors.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -390,9 +382,9 @@ class _CustomAppBar extends ConsumerWidget {
                 }
               },
               itemBuilder: (context) => [
-                PopupMenuItem(
+                const PopupMenuItem(
                   value: 'export',
-                  child: const Row(
+                  child: Row(
                     children: [
                       Icon(Icons.download_rounded, size: 18, color: AppColors.indigo),
                       SizedBox(width: 8),
@@ -431,6 +423,14 @@ class _CustomAppBar extends ConsumerWidget {
                   ),
                 ),
               ],
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.more_vert_rounded, size: 20, color: AppColors.textTertiary),
+              ),
             ),
           ],
         ),
@@ -473,13 +473,19 @@ class _RallyCaptureBodyState extends ConsumerState<_RallyCaptureBody> {
       String actionLabel = type.label;
       if (type == RallyActionTypes.firstBallKill) {
         await sessionController.completeRallyWithWin(player: player, actionType: type);
-        _showSnackBar(context, 'FBK by #${player.jerseyNumber}! Point won.');
+        if (context.mounted) {
+          _showSnackBar(context, 'FBK by #${player.jerseyNumber}! Point won.');
+        }
       } else if (type == RallyActionTypes.attackKill || type == RallyActionTypes.serveAce) {
         await sessionController.completeRallyWithWin(player: player, actionType: type);
-        _showSnackBar(context, '$actionLabel by #${player.jerseyNumber}! Point won.');
+        if (context.mounted) {
+          _showSnackBar(context, '$actionLabel by #${player.jerseyNumber}! Point won.');
+        }
       } else if (type == RallyActionTypes.attackError || type == RallyActionTypes.serveError) {
         await sessionController.completeRallyWithLoss(player: player, actionType: type);
-        _showSnackBar(context, '$actionLabel by #${player.jerseyNumber}. Point lost.');
+        if (context.mounted) {
+          _showSnackBar(context, '$actionLabel by #${player.jerseyNumber}. Point lost.');
+        }
       } else if (type.isPointScoring) {
         _showSnackBar(context, '$actionLabel by #${player.jerseyNumber}');
       } else {
@@ -495,7 +501,7 @@ class _RallyCaptureBodyState extends ConsumerState<_RallyCaptureBody> {
         return;
       }
       final completed = await sessionController.completeRallyWithWin();
-      if (completed) {
+      if (context.mounted && completed) {
         _showSnackBar(context, 'Point won!');
       }
     }
@@ -549,7 +555,7 @@ class _RallyCaptureBodyState extends ConsumerState<_RallyCaptureBody> {
         benchPlayers: currentLineup.benchPlayers,
         substitutionsRemaining: totals.substitutionsRemaining,
       );
-      if (selection == null) return;
+      if (!context.mounted || selection == null) return;
       
       // Update the lineup with animation
       lineupNotifier.substitute(selection.outgoing, selection.incoming);
@@ -833,7 +839,7 @@ class _RallyCaptureBodyState extends ConsumerState<_RallyCaptureBody> {
                       HapticFeedback.mediumImpact();
                       // Only complete if there are events, otherwise add a default error
                       final completed = await sessionController.completeRallyWithLoss();
-                      if (completed) {
+                      if (context.mounted && completed) {
                         _showSnackBar(context, 'Point lost.');
                       }
                     },

@@ -129,13 +129,13 @@ class _MatchHistoryScreenState extends ConsumerState<MatchHistoryScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.sports_volleyball_outlined,
                           size: 64,
                           color: AppColors.textMuted,
                         ),
                         const SizedBox(height: 16),
-                        Text(
+                        const Text(
                           'No matches found',
                           style: TextStyle(
                             color: AppColors.textMuted,
@@ -184,7 +184,7 @@ class _MatchHistoryScreenState extends ConsumerState<MatchHistoryScreen> {
                       color: AppColors.rose,
                     ),
                     const SizedBox(height: 16),
-                    Text(
+                    const Text(
                       'Error loading matches',
                       style: TextStyle(
                         color: AppColors.textPrimary,

@@ -227,7 +227,7 @@ class _PlayerEditScreenState extends ConsumerState<PlayerEditScreen> {
                       child: Center(
                         child: Text(
                           '${widget.player.jerseyNumber}',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: AppColors.indigo,

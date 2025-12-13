@@ -41,12 +41,12 @@ class OfflineCacheService {
   // Teams caching
   Future<void> cacheTeams(List<Team> teams) async {
     final data = teams.map((team) => jsonEncode(team.toMap())).toList();
-    await _teamsBox.put('${_teamsPrefix}list', jsonEncode(data));
+    await _teamsBox.put('$_teamsPrefix' 'list', jsonEncode(data));
     await _updateCacheTimestamp();
   }
 
   List<Team>? getCachedTeams() {
-    final dataStr = _teamsBox.get('${_teamsPrefix}list');
+    final dataStr = _teamsBox.get('$_teamsPrefix' 'list');
     if (dataStr == null) return null;
 
     try {
@@ -70,11 +70,11 @@ class OfflineCacheService {
       'jersey_number': player.jerseyNumber,
       'position': player.position,
     })).toList();
-    await _playersBox.put('${_playersPrefix}$teamId', jsonEncode(data));
+    await _playersBox.put('$_playersPrefix$teamId', jsonEncode(data));
   }
 
   List<MatchPlayer>? getCachedPlayers(String teamId) {
-    final dataStr = _playersBox.get('${_playersPrefix}$teamId');
+    final dataStr = _playersBox.get('$_playersPrefix$teamId');
     if (dataStr == null) return null;
 
     try {
@@ -90,11 +90,11 @@ class OfflineCacheService {
   // Templates caching (by team)
   Future<void> cacheTemplates(String teamId, List<RosterTemplate> templates) async {
     final data = templates.map((template) => jsonEncode(template.toMap())).toList();
-    await _templatesBox.put('${_templatesPrefix}$teamId', jsonEncode(data));
+    await _templatesBox.put('$_templatesPrefix$teamId', jsonEncode(data));
   }
 
   List<RosterTemplate>? getCachedTemplates(String teamId) {
-    final dataStr = _templatesBox.get('${_templatesPrefix}$teamId');
+    final dataStr = _templatesBox.get('$_templatesPrefix$teamId');
     if (dataStr == null) return null;
 
     try {

@@ -44,7 +44,7 @@ class ConnectionGuard extends ConsumerWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.cloud_off_outlined,
                             size: 64,
                             color: Colors.orange,
@@ -93,7 +93,7 @@ class ConnectionGuard extends ConsumerWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.lock_outlined,
                             size: 64,
                             color: Colors.orange,

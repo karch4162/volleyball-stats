@@ -1,11 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/errors/repository_errors.dart';
+import '../../../core/utils/logger.dart';
 import '../models/match_draft.dart';
 import '../models/match_player.dart';
 import '../models/roster_template.dart';
 import 'match_setup_repository.dart';
+
+final _logger = createLogger('SupabaseMatchSetupRepo');
 
 class SupabaseMatchSetupRepository implements MatchSetupRepository {
   SupabaseMatchSetupRepository(this._client);
@@ -40,9 +42,7 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
     
     final effectiveTeamId = _getEffectiveTeamId(teamId);
     
-    if (kDebugMode) {
-      print('Fetching roster from Supabase for team: $effectiveTeamId (coach: $_currentUserId)');
-    }
+    _logger.d('Fetching roster from Supabase for team: $effectiveTeamId (coach: $_currentUserId)');
     
     try {
       // RLS will ensure we can only access teams where coach_id = auth.uid()
@@ -57,17 +57,17 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
 
       final players = rows.map(MatchPlayer.fromMap).toList();
       
+      _logger.d('Found ${players.length} players in database');
       if (kDebugMode) {
-        print('  Found ${players.length} players in database');
         for (final player in players) {
-          print('    - ${player.jerseyNumber}: ${player.name} (ID: ${player.id})');
+          _logger.d('  - ${player.jerseyNumber}: ${player.name} (ID: ${player.id})');
         }
       }
       
       return players;
-    } catch (error, stackTrace) {
-      print('Error fetching roster from Supabase: $error');
-      print('  Team ID: $effectiveTeamId');
+    } catch (error) {
+      _logger.e('Error fetching roster from Supabase', error: error);
+      _logger.e('Team ID: $effectiveTeamId');
       rethrow;
     }
   }
@@ -85,7 +85,7 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
       return null;
     }
 
-    return MatchDraft.fromMap(response as Map<String, dynamic>);
+    return MatchDraft.fromMap(response);
   }
 
   @override
@@ -125,13 +125,10 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
         await _client.from('match_drafts').insert(payload);
       }
       
-      if (kDebugMode) {
-        print('Saved draft to Supabase: $matchId');
-      }
+      _logger.i('Saved draft to Supabase: $matchId');
     } catch (error, stackTrace) {
-      print('Error saving draft to Supabase: $error');
-      print('Payload: $payload');
-      print('Stack trace: $stackTrace');
+      _logger.e('Error saving draft to Supabase', error: error, stackTrace: stackTrace);
+      _logger.e('Payload: $payload');
       rethrow;
     }
   }
@@ -194,12 +191,12 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
 
     try {
       if (kDebugMode) {
-        print('=== SAVING TEMPLATE TO SUPABASE ===');
-        print('  Template ID: ${template.id}');
-        print('  Template Name: ${template.name}');
-        print('  Team ID: $teamIdUuid');
-        print('  Player IDs (${template.playerIds.length}): ${template.playerIds.toList()}');
-        print('  Rotation entries: ${template.defaultRotation.length}');
+        _logger.d('=== SAVING TEMPLATE TO SUPABASE ===');
+        _logger.d('Template ID: ${template.id}');
+        _logger.d('Template Name: ${template.name}');
+        _logger.d('Team ID: $teamIdUuid');
+        _logger.d('Player IDs (${template.playerIds.length}): ${template.playerIds.toList()}');
+        _logger.d('Rotation entries: ${template.defaultRotation.length}');
         
         // Check if player IDs exist in database
         try {
@@ -213,55 +210,49 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
             final missingPlayerIds = template.playerIds.where((id) => !foundPlayerIds.contains(id)).toList();
             
             if (missingPlayerIds.isNotEmpty) {
-              print('  ⚠️  WARNING: ${missingPlayerIds.length} player IDs not found in database:');
+              _logger.w('${missingPlayerIds.length} player IDs not found in database:');
               for (final id in missingPlayerIds) {
-                print('    - $id');
+                _logger.w('  - $id');
               }
-              print('  Found player IDs: $foundPlayerIds');
+              _logger.w('Found player IDs: $foundPlayerIds');
             } else {
-              print('  ✓ All player IDs exist in database');
+              _logger.d('All player IDs exist in database');
             }
           }
         } catch (e) {
-          print('  ⚠️  Could not verify player IDs: $e');
+          _logger.w('Could not verify player IDs', error: e);
         }
         
-        print('  Payload keys: ${payload.keys.toList()}');
-        print('  Payload: $payload');
-        print('  Auth user: ${_client.auth.currentUser?.id ?? "NOT AUTHENTICATED"}');
+        _logger.d('Payload keys: ${payload.keys.toList()}');
+        _logger.d('Payload: $payload');
+        _logger.d('Auth user: ${_client.auth.currentUser?.id ?? "NOT AUTHENTICATED"}');
       }
       
       // Verify table exists by checking if we can query it first
       try {
         await _client.from('roster_templates').select('id').limit(1);
-        if (kDebugMode) {
-          print('  ✓ Table exists and is accessible');
-        }
+        _logger.d('Table exists and is accessible');
       } catch (e) {
-        print('  ✗ ERROR: Cannot access roster_templates table: $e');
+        _logger.e('Cannot access roster_templates table', error: e);
         rethrow;
       }
       
       final response = await _client.from('roster_templates').upsert(payload, onConflict: 'id').select();
       
       if (kDebugMode) {
-        print('✓ Successfully saved template to Supabase: ${template.id}');
-        print('  Response: $response');
-        print('  Response type: ${response.runtimeType}');
-        if (response is List) {
-          print('  Response count: ${response.length}');
-          if (response.isNotEmpty) {
-            print('  Response data: ${response.first}');
-          }
+        _logger.i('Successfully saved template to Supabase: ${template.id}');
+        _logger.d('Response: $response');
+        _logger.d('Response type: ${response.runtimeType}');
+        _logger.d('Response count: ${response.length}');
+        if (response.isNotEmpty) {
+          _logger.d('Response data: ${response.first}');
         }
-      }
+            }
     } catch (error, stackTrace) {
-      print('✗ ERROR saving template to Supabase:');
-      print('  Error: $error');
-      print('  Error type: ${error.runtimeType}');
-      print('  Payload: $payload');
-      print('  Stack trace: $stackTrace');
-      print('  Auth user: ${_client.auth.currentUser?.id ?? "NOT AUTHENTICATED"}');
+      _logger.e('ERROR saving template to Supabase', error: error, stackTrace: stackTrace);
+      _logger.e('Error type: ${error.runtimeType}');
+      _logger.e('Payload: $payload');
+      _logger.e('Auth user: ${_client.auth.currentUser?.id ?? "NOT AUTHENTICATED"}');
       rethrow;
     }
   }
@@ -301,7 +292,7 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
         .maybeSingle();
 
     if (template != null) {
-      final currentTemplate = RosterTemplate.fromMap(template as Map<String, dynamic>);
+      final currentTemplate = RosterTemplate.fromMap(template);
       final updated = currentTemplate.markUsed();
       await saveRosterTemplate(teamId: effectiveTeamId, template: updated);
     }
@@ -448,9 +439,7 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
 
       return matchResult as Map<String, dynamic>?;
     } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching match details: $e');
-      }
+      _logger.e('Error fetching match details', error: e);
       return null;
     }
   }
@@ -686,7 +675,7 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
         return {};
       }
 
-      final setData = setResult as Map<String, dynamic>;
+      final setData = setResult;
       final rallies = (setData['rallies'] as List<dynamic>?) ?? [];
       
       final playerStats = <String, Map<String, int>>{};
@@ -754,9 +743,7 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
 
       return playerStats;
     } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching set player stats: $e');
-      }
+      _logger.e('Error fetching set player stats', error: e);
       return {};
     }
   }

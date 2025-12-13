@@ -71,13 +71,13 @@ class _TeamSelectionScreenState extends ConsumerState<TeamSelectionScreen> {
                 }
               },
               itemBuilder: (context) => [
-                PopupMenuItem(
+                const PopupMenuItem(
                   value: 'logout',
                   child: Row(
                     children: [
-                      const Icon(Icons.logout, size: 20),
-                      const SizedBox(width: 8),
-                      const Text('Sign Out'),
+                      Icon(Icons.logout, size: 20),
+                      SizedBox(width: 8),
+                      Text('Sign Out'),
                     ],
                   ),
                 ),
@@ -100,7 +100,7 @@ class _TeamSelectionScreenState extends ConsumerState<TeamSelectionScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.group_outlined,
                           size: 64,
                           color: AppColors.textMuted,
@@ -200,7 +200,7 @@ class _TeamSelectionScreenState extends ConsumerState<TeamSelectionScreen> {
                           ),
                         ),
                         if (isSelected)
-                          Icon(
+                          const Icon(
                             Icons.check_circle,
                             color: AppColors.indigo,
                           ),

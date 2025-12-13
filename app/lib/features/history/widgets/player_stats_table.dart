@@ -192,7 +192,7 @@ class PlayerStatsTable extends StatelessWidget {
 
   Widget _buildPercentageCell(double percentage, bool hasAttempts, Color color) {
     if (!hasAttempts) {
-      return Text(
+      return const Text(
         '-',
         style: TextStyle(
           color: AppColors.textMuted,

@@ -157,7 +157,7 @@ class _MatchRecapScreenState extends ConsumerState<MatchRecapScreen> {
                 color: AppColors.rose,
               ),
               const SizedBox(height: 16),
-              Text(
+              const Text(
                 'Error loading match details',
                 style: TextStyle(
                   color: AppColors.textPrimary,

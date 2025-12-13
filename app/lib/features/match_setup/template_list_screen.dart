@@ -37,9 +37,9 @@ class TemplateListScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
+              const Text(
                 'Failed to load templates',
-                style: const TextStyle(color: AppColors.textPrimary),
+                style: TextStyle(color: AppColors.textPrimary),
               ),
               const SizedBox(height: 16),
               FilledButton(
@@ -200,7 +200,7 @@ class _TemplateCard extends StatelessWidget {
                         label: '${template.playerIds.length} players',
                       ),
                       if (template.defaultRotation.isNotEmpty)
-                        _InfoChip(
+                        const _InfoChip(
                           icon: Icons.swap_horiz_rounded,
                           label: 'Rotation set',
                         ),

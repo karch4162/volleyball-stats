@@ -1,12 +1,14 @@
 import 'dart:async';
-import 'dart:collection';
 
 import 'package:hive/hive.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/utils/logger.dart';
 import 'rally_repository.dart';
 import '../models/rally_models.dart';
 import '../../match_setup/models/match_player.dart';
+
+final _logger = createLogger('RallySyncRepository');
 
 /// Repository that handles offline queue and sync for rally data
 class RallySyncRepository {
@@ -51,7 +53,7 @@ class RallySyncRepository {
         note: note,
       );
     } catch (e) {
-      print('Failed to save special action: $e');
+      _logger.w('Failed to save special action', error: e);
     }
   }
 

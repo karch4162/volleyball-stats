@@ -2,9 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/providers/supabase_client_provider.dart';
+import '../../core/utils/logger.dart';
 import '../auth/auth_provider.dart';
 import '../match_setup/models/match_player.dart';
 import '../teams/team_providers.dart';
+
+final _logger = createLogger('PlayerProviders');
 
 /// Provider that fetches all players for the selected team
 final teamPlayersProvider = FutureProvider.family<List<MatchPlayer>, String>((ref, teamId) async {
@@ -26,8 +29,7 @@ final teamPlayersProvider = FutureProvider.family<List<MatchPlayer>, String>((re
     final rows = (response as List<dynamic>).cast<Map<String, dynamic>>();
     return rows.map((row) => MatchPlayer.fromMap(row)).toList();
   } catch (e, stackTrace) {
-    print('Error fetching players: $e');
-    print('Stack trace: $stackTrace');
+    _logger.e('Error fetching players', error: e, stackTrace: stackTrace);
     rethrow;
   }
 });
@@ -60,7 +62,7 @@ class PlayerService {
     }
 
     // Check if jersey number is already taken for this team
-    final existing = await _client!
+    final existing = await _client
         .from('players')
         .select('id')
         .eq('team_id', teamId)
@@ -71,7 +73,7 @@ class PlayerService {
       throw Exception('Jersey number $jerseyNumber is already taken for this team');
     }
 
-    final response = await _client!.from('players').insert({
+    final response = await _client.from('players').insert({
       'team_id': teamId,
       'first_name': firstName,
       'last_name': lastName,
@@ -80,7 +82,7 @@ class PlayerService {
       'active': true,
     }).select().single();
 
-    return MatchPlayer.fromMap(response as Map<String, dynamic>);
+    return MatchPlayer.fromMap(response);
   }
 
   /// Update an existing player
@@ -98,7 +100,7 @@ class PlayerService {
 
     // If jersey number is being changed, check if new number is available
     if (jerseyNumber != null) {
-      final existing = await _client!
+      final existing = await _client
           .from('players')
           .select('id')
           .eq('team_id', teamId)
@@ -117,14 +119,14 @@ class PlayerService {
     if (jerseyNumber != null) updates['jersey_number'] = jerseyNumber;
     if (position != null) updates['position'] = position;
 
-    final response = await _client!
+    final response = await _client
         .from('players')
         .update(updates)
         .eq('id', playerId)
         .select()
         .single();
 
-    return MatchPlayer.fromMap(response as Map<String, dynamic>);
+    return MatchPlayer.fromMap(response);
   }
 
   /// Delete a player (soft delete by setting active = false)
@@ -133,7 +135,7 @@ class PlayerService {
       throw Exception('Supabase client not initialized');
     }
 
-    await _client!
+    await _client
         .from('players')
         .update({'active': false})
         .eq('id', playerId);

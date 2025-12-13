@@ -70,7 +70,7 @@ class ReadOnlyCachedRepository implements MatchSetupRepository {
     required String teamId,
     required RosterTemplate template,
   }) async {
-    throw OfflineEntityCreationException(
+    throw const OfflineEntityCreationException(
       'Cannot create or modify templates while offline. Please connect to Supabase.',
     );
   }
@@ -80,7 +80,7 @@ class ReadOnlyCachedRepository implements MatchSetupRepository {
     required String teamId,
     required String templateId,
   }) async {
-    throw OfflineEntityCreationException(
+    throw const OfflineEntityCreationException(
       'Cannot delete templates while offline. Please connect to Supabase.',
     );
   }

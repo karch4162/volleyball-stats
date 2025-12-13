@@ -142,9 +142,9 @@ class _PlayerPerformanceCardV2State extends State<PlayerPerformanceCardV2> {
                             ),
                           ),
                         const SizedBox(height: 2),
-                        Text(
+                        const Text(
                           'Efficiency',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.textMuted,
                             fontSize: 10,
                           ),
@@ -176,7 +176,7 @@ class _PlayerPerformanceCardV2State extends State<PlayerPerformanceCardV2> {
                 children: [
                   // Attacking section
                   if (performance.attempts > 0) ...[
-                    _SectionHeader(
+                    const _SectionHeader(
                       icon: Icons.sports_volleyball,
                       title: 'Attacking',
                       color: AppColors.indigo,
@@ -219,7 +219,7 @@ class _PlayerPerformanceCardV2State extends State<PlayerPerformanceCardV2> {
                   
                   // Serving section
                   if (performance.totalServes > 0) ...[
-                    _SectionHeader(
+                    const _SectionHeader(
                       icon: Icons.sports_tennis,
                       title: 'Serving',
                       color: AppColors.emerald,
@@ -267,7 +267,7 @@ class _PlayerPerformanceCardV2State extends State<PlayerPerformanceCardV2> {
                       performance.digs > 0 ||
                       performance.assists > 0 ||
                       performance.fbk > 0) ...[
-                    _SectionHeader(
+                    const _SectionHeader(
                       icon: Icons.star_rounded,
                       title: 'Other Contributions',
                       color: AppColors.purple,

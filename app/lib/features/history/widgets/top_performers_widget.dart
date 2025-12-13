@@ -103,7 +103,7 @@ class _PlayerRow extends StatelessWidget {
         ),
         Text(
           category.toLowerCase() == 'attack efficiency'
-              ? '${_value}%'
+              ? '$_value%'
               : _value.toString(),
           style: const TextStyle(
             color: AppColors.indigo,
