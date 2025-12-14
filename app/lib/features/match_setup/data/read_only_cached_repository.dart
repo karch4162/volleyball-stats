@@ -3,6 +3,7 @@ import '../../../core/errors/repository_errors.dart';
 import '../models/match_draft.dart';
 import '../models/match_player.dart';
 import '../models/roster_template.dart';
+import '../models/match_status.dart';
 import 'match_draft_cache.dart';
 import 'match_setup_repository.dart';
 
@@ -133,6 +134,23 @@ class ReadOnlyCachedRepository implements MatchSetupRepository {
   }) async {
     // Return empty map when offline - history requires Supabase connection
     return {};
+  }
+
+  @override
+  Future<void> completeMatch({
+    required String matchId,
+    required MatchCompletion completion,
+  }) async {
+    // Read-only repository cannot complete matches
+    throw Exception('Cannot complete match while offline');
+  }
+
+  @override
+  Future<MatchCompletion?> getMatchCompletion({
+    required String matchId,
+  }) async {
+    // Return null - no completion data available offline
+    return null;
   }
 }
 

@@ -2,6 +2,8 @@ import '../models/match_draft.dart';
 import '../models/match_player.dart';
 import '../models/roster_template.dart';
 
+import '../models/match_status.dart';
+
 abstract class MatchSetupRepository {
   /// Check if this repository supports entity creation (requires Supabase connection)
   bool get supportsEntityCreation;
@@ -61,6 +63,17 @@ abstract class MatchSetupRepository {
   Future<Map<String, Map<String, int>>> fetchSetPlayerStats({
     required String matchId,
     required int setNumber,
+  });
+
+  /// Mark a match as completed with final score
+  Future<void> completeMatch({
+    required String matchId,
+    required MatchCompletion completion,
+  });
+
+  /// Get match completion status
+  Future<MatchCompletion?> getMatchCompletion({
+    required String matchId,
   });
 }
 

@@ -161,6 +161,7 @@ class RallyRepository {
         rallies.add(RallyRecord(
           rallyId: rallyData['id'] as String,
           rallyNumber: rallyData['rally_number'] as int,
+          rotationNumber: (rallyData['rotation'] as int?) ?? 1,
           completedAt: DateTime.parse(rallyData['created_at'] as String),
           events: events,
         ));

@@ -9,6 +9,8 @@ import 'models/rally_models.dart';
 import '../history/set_dashboard_screen.dart';
 import '../match_setup/match_setup_flow.dart';
 import '../match_setup/models/match_player.dart';
+import '../match_setup/models/match_status.dart';
+import '../match_setup/providers.dart';
 import '../export/export_screen.dart';
 import '../teams/team_providers.dart';
 
@@ -186,18 +188,43 @@ class RallyCaptureScreen extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(context).pop();
-              // TODO: Mark match as completed in database
-              // For now, just show a message
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Match ended. Final score saved.'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-              // Navigate back to home/match list
-              Navigator.of(context).popUntil((route) => route.isFirst);
+              
+              // Mark match as completed in database
+              try {
+                final repository = ref.read(matchSetupRepositoryProvider);
+                await repository.completeMatch(
+                  matchId: matchId,
+                  completion: MatchCompletion(
+                    status: MatchStatus.completed,
+                    completedAt: DateTime.now(),
+                    finalScoreTeam: totals.wins,
+                    finalScoreOpponent: totals.losses,
+                  ),
+                );
+                
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Match ended. Final score: ${totals.wins} - ${totals.losses}'),
+                      duration: const Duration(seconds: 2),
+                      backgroundColor: AppColors.emerald,
+                    ),
+                  );
+                  // Navigate back to home/match list
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to end match: $e'),
+                      backgroundColor: AppColors.rose,
+                    ),
+                  );
+                }
+              }
             },
             style: TextButton.styleFrom(
               foregroundColor: AppColors.rose,
@@ -508,8 +535,15 @@ class _RallyCaptureBodyState extends ConsumerState<_RallyCaptureBody> {
 
     Future<void> onRotate() async {
       HapticFeedback.lightImpact();
-      // TODO: Implement rotation logic
-      _showSnackBar(context, 'Rotation feature coming soon');
+      
+      // Show rotation picker dialog
+      final newRotation = await _showRotationPicker(context, session.currentRotation);
+      if (newRotation != null && newRotation != session.currentRotation) {
+        sessionController.setRotation(newRotation);
+        if (context.mounted) {
+          _showSnackBar(context, 'Rotation set to $newRotation');
+        }
+      }
     }
 
     void onUndo() {
@@ -1536,6 +1570,67 @@ void _showSnackBar(BuildContext context, String message) {
     SnackBar(
       content: Text(message),
       backgroundColor: AppColors.glass,
+    ),
+  );
+}
+
+Future<int?> _showRotationPicker(BuildContext context, int currentRotation) {
+  return showDialog<int>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Select Rotation'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'Choose current rotation (1-6)',
+            style: TextStyle(fontSize: 14, color: AppColors.textMuted),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: List.generate(
+              6,
+              (index) {
+                final rotation = index + 1;
+                final isSelected = rotation == currentRotation;
+                return InkWell(
+                  onTap: () => Navigator.of(context).pop(rotation),
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.indigo : AppColors.glass,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected ? AppColors.indigo : AppColors.borderLight,
+                        width: 2,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$rotation',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? Colors.white : AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+      ],
     ),
   );
 }

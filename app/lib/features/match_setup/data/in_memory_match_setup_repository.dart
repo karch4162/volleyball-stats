@@ -4,6 +4,7 @@ import '../../../core/errors/repository_errors.dart';
 import '../models/match_draft.dart';
 import '../models/match_player.dart';
 import '../models/roster_template.dart';
+import '../models/match_status.dart';
 import 'match_setup_repository.dart';
 
 /// Read-only in-memory repository that returns empty data
@@ -134,6 +135,24 @@ class InMemoryMatchSetupRepository implements MatchSetupRepository {
     required int setNumber,
   }) async {
     return {};
+  }
+
+  @override
+  Future<void> completeMatch({
+    required String matchId,
+    required MatchCompletion completion,
+  }) async {
+    // No-op for in-memory repository
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+  }
+
+  @override
+  Future<MatchCompletion?> getMatchCompletion({
+    required String matchId,
+  }) async {
+    // Return null - no completion data in memory
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    return null;
   }
 }
 

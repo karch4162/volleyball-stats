@@ -5,6 +5,7 @@ import '../../../core/utils/logger.dart';
 import '../models/match_draft.dart';
 import '../models/match_player.dart';
 import '../models/roster_template.dart';
+import '../models/match_status.dart';
 import 'match_setup_repository.dart';
 
 final _logger = createLogger('SupabaseMatchSetupRepo');
@@ -745,6 +746,53 @@ class SupabaseMatchSetupRepository implements MatchSetupRepository {
     } catch (e) {
       _logger.e('Error fetching set player stats', error: e);
       return {};
+    }
+  }
+
+  @override
+  Future<void> completeMatch({
+    required String matchId,
+    required MatchCompletion completion,
+  }) async {
+    if (_currentUserId == null) {
+      throw Exception('User must be authenticated to complete match');
+    }
+
+    try {
+      await _client.from('matches').update({
+        'status': completion.status.value,
+        'completed_at': completion.completedAt.toIso8601String(),
+        'final_score_team': completion.finalScoreTeam,
+        'final_score_opponent': completion.finalScoreOpponent,
+      }).eq('id', matchId);
+    } catch (error) {
+      _logger.e('Failed to complete match', error: error);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<MatchCompletion?> getMatchCompletion({
+    required String matchId,
+  }) async {
+    if (_currentUserId == null) {
+      throw Exception('User must be authenticated to get match completion');
+    }
+
+    try {
+      final response = await _client
+          .from('matches')
+          .select('status, completed_at, final_score_team, final_score_opponent')
+          .eq('id', matchId)
+          .maybeSingle();
+      
+      if (response != null && response['status'] != null) {
+        return MatchCompletion.fromMap(response);
+      }
+      return null;
+    } catch (error) {
+      _logger.e('Failed to get match completion', error: error);
+      return null;
     }
   }
 }

@@ -144,24 +144,28 @@ class RallyRecord {
   RallyRecord({
     required this.rallyId,
     required this.rallyNumber,
+    required this.rotationNumber,
     required List<RallyEvent> events,
     required this.completedAt,
   }) : events = List<RallyEvent>.unmodifiable(events);
 
   final String rallyId;
   final int rallyNumber;
+  final int rotationNumber; // 1-6: Current rotation when rally occurred
   final List<RallyEvent> events;
   final DateTime completedAt;
 
   RallyRecord copyWith({
     String? rallyId,
     int? rallyNumber,
+    int? rotationNumber,
     List<RallyEvent>? events,
     DateTime? completedAt,
   }) {
     return RallyRecord(
       rallyId: rallyId ?? this.rallyId,
       rallyNumber: rallyNumber ?? this.rallyNumber,
+      rotationNumber: rotationNumber ?? this.rotationNumber,
       events: events ?? this.events,
       completedAt: completedAt ?? this.completedAt,
     );
@@ -174,6 +178,7 @@ class RallyCaptureSession {
     required this.setId,
     required this.currentSetNumber,
     required this.currentRallyNumber,
+    required this.currentRotation,
     required List<RallyEvent> currentEvents,
     required List<RallyRecord> completedRallies,
     required this.canUndo,
@@ -185,6 +190,7 @@ class RallyCaptureSession {
   final String setId;
   final int currentSetNumber;
   final int currentRallyNumber;
+  final int currentRotation; // 1-6: Current rotation position
   final List<RallyEvent> currentEvents;
   final List<RallyRecord> completedRallies;
   final bool canUndo;
@@ -194,12 +200,14 @@ class RallyCaptureSession {
     required String matchId,
     required String setId,
     int currentSetNumber = 1,
+    int currentRotation = 1,
   }) {
     return RallyCaptureSession(
       matchId: matchId,
       setId: setId,
       currentSetNumber: currentSetNumber,
       currentRallyNumber: 1,
+      currentRotation: currentRotation,
       currentEvents: const [],
       completedRallies: const [],
       canUndo: false,
@@ -235,6 +243,7 @@ class RallyCaptureSession {
     String? setId,
     int? currentSetNumber,
     int? currentRallyNumber,
+    int? currentRotation,
     List<RallyEvent>? currentEvents,
     List<RallyRecord>? completedRallies,
     bool? canUndo,
@@ -245,6 +254,7 @@ class RallyCaptureSession {
       setId: setId ?? this.setId,
       currentSetNumber: currentSetNumber ?? this.currentSetNumber,
       currentRallyNumber: currentRallyNumber ?? this.currentRallyNumber,
+      currentRotation: currentRotation ?? this.currentRotation,
       currentEvents: currentEvents ?? this.currentEvents,
       completedRallies: completedRallies ?? this.completedRallies,
       canUndo: canUndo ?? this.canUndo,

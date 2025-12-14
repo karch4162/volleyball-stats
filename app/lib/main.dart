@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/cache/offline_cache_service.dart';
+import 'core/persistence/hive_service.dart';
 import 'core/supabase.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
@@ -14,6 +15,26 @@ import 'features/match_setup/providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Hive for offline persistence (CRITICAL: do this first)
+  try {
+    if (kDebugMode) {
+      debugPrint('[Main] Initializing Hive for offline persistence...');
+    }
+    await HiveService.initialize();
+    if (kDebugMode) {
+      debugPrint('[Main] ✓ Hive initialized successfully');
+      final stats = HiveService.getStorageStats();
+      debugPrint('[Main] Storage stats: $stats');
+    }
+  } catch (e, stackTrace) {
+    if (kDebugMode) {
+      debugPrint('[Main] ✗ FATAL: Failed to initialize Hive: $e');
+      debugPrint('[Main] Stack trace: $stackTrace');
+    }
+    // Hive failure is critical for offline-first architecture
+    throw Exception('Failed to initialize offline storage: $e');
+  }
   
   // Load .env file if it exists
   // flutter_dotenv looks for files relative to the app root (app/ directory)

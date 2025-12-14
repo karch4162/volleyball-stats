@@ -267,9 +267,13 @@ class RallyCaptureSessionController extends StateNotifier<RallyCaptureSession> {
       return false;
     }
 
+    // Determine if we won this rally (to advance rotation)
+    final wonRally = _didWinRally(state.currentEvents);
+    
     final record = RallyRecord(
       rallyId: _uuid.v4(),
       rallyNumber: state.currentRallyNumber,
+      rotationNumber: state.currentRotation,
       events: List<RallyEvent>.from(state.currentEvents),
       completedAt: DateTime.now(),
     );
@@ -284,19 +288,53 @@ class RallyCaptureSessionController extends StateNotifier<RallyCaptureSession> {
         matchId: state.matchId,
         setId: state.setId,
         rallyRecord: record,
-        rotation: 1, // TODO: Get current rotation from UI state
+        rotation: state.currentRotation
       );
     } catch (e) {
       // Log error but don't fail the operation - rally stays in local state
       _logger.w('Failed to sync rally', error: e);
     }
 
+    // Advance rotation if we won the rally
+    final nextRotation = wonRally ? _advanceRotation(state.currentRotation) : state.currentRotation;
+    
     _updateState(
       currentRallyNumber: state.currentRallyNumber + 1,
+      currentRotation: nextRotation,
       currentEvents: const <RallyEvent>[],
       completedRallies: completed,
     );
     return true;
+  }
+  
+  /// Determine if we won this rally based on events
+  bool _didWinRally(List<RallyEvent> events) {
+    if (events.isEmpty) return false;
+    
+    // Check for point-scoring events (we won)
+    final hasPointScoring = events.any((e) => e.type.isPointScoring);
+    
+    // Check for error events (we lost)
+    final hasError = events.any((e) => e.type.isError);
+    
+    // If we have point-scoring and no errors, we won
+    // If we have errors, we lost (errors override scoring)
+    return hasPointScoring && !hasError;
+  }
+  
+  /// Advance rotation by 1 (wraps from 6 to 1)
+  int _advanceRotation(int current) {
+    return (current % 6) + 1;
+  }
+  
+  /// Manually set the rotation (for corrections or starting lineup)
+  void setRotation(int rotation) {
+    if (rotation < 1 || rotation > 6) {
+      _logger.w('Invalid rotation: $rotation (must be 1-6)');
+      return;
+    }
+    _updateState(currentRotation: rotation);
+    _logger.i('Rotation set to: $rotation');
   }
 
   bool undo() {
@@ -384,6 +422,7 @@ class RallyCaptureSessionController extends StateNotifier<RallyCaptureSession> {
     String? setId,
     int? currentSetNumber,
     int? currentRallyNumber,
+    int? currentRotation,
     List<RallyEvent>? currentEvents,
     List<RallyRecord>? completedRallies,
     bool? canUndo,
@@ -393,6 +432,7 @@ class RallyCaptureSessionController extends StateNotifier<RallyCaptureSession> {
       setId: setId,
       currentSetNumber: currentSetNumber,
       currentRallyNumber: currentRallyNumber,
+      currentRotation: currentRotation,
       currentEvents: currentEvents,
       completedRallies: completedRallies,
       canUndo: canUndo ?? _undoStack.isNotEmpty,

@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import '../../../core/utils/logger.dart';
+import '../../../core/persistence/hive_service.dart';
+import '../../../core/persistence/type_adapters.dart';
 import '../models/match_draft.dart';
 import '../models/match_player.dart';
 import '../models/roster_template.dart';
+import '../models/match_status.dart';
 import 'match_setup_repository.dart';
 import '../../../core/supabase.dart';
 
@@ -27,82 +30,145 @@ class OfflineMatchSetupRepository implements MatchSetupRepository {
     required String matchId,
     required MatchDraft draft,
   }) async {
+    // Always save to local storage first (offline-first)
+    try {
+      final box = HiveService.getBox(HiveService.matchDraftsBox);
+      final key = _draftKey(matchId);
+      final draftMap = draft.toMap();
+      draftMap['match_id'] = matchId;
+      draftMap['team_id'] = teamId;
+      
+      await box.put(key, draftMap);
+      _logger.i('Saved draft locally: $matchId');
+    } catch (e, st) {
+      _logger.e('Failed to save draft locally', error: e, stackTrace: st);
+      rethrow;
+    }
+    
+    // Try to sync to Supabase if available (best effort)
     try {
       final client = getSupabaseClientOrNull();
-      if (client == null) {
-        return; // No Supabase available, skip
+      if (client != null) {
+        final matchData = {
+          'match_id': matchId,
+          'team_id': teamId,
+          'opponent': draft.opponent,
+          'match_date': draft.matchDate?.toIso8601String(),
+          'location': draft.location,
+          'season_label': draft.seasonLabel,
+          'selected_player_ids': draft.selectedPlayerIds.toList(),
+          'starting_rotation': {
+            for (final entry in draft.startingRotation.entries)
+              entry.key.toString(): entry.value,
+          },
+        };
+        
+        await client.from('match_drafts').upsert(matchData);
+        _logger.i('Synced draft to Supabase: $matchId');
       }
-      
-      final matchData = {
-        'match_id': matchId,
-        'team_id': teamId,
-        'opponent': draft.opponent,
-        'match_date': draft.matchDate?.toIso8601String(),
-        'location': draft.location,
-        'season_label': draft.seasonLabel,
-        'selected_player_ids': draft.selectedPlayerIds.toList(),
-        'starting_rotation': {
-          for (final entry in draft.startingRotation.entries)
-            entry.key.toString(): entry.value,
-        },
-      };
-      
-      await client.from('match_drafts').upsert(matchData);
-      
     } catch (e) {
-      // Save locally if Supabase fails
-      _logger.w('Failed to save draft to Supabase', error: e);
+      // Don't fail if Supabase sync fails - we have it locally
+      _logger.w('Failed to sync draft to Supabase', error: e);
     }
   }
 
   @override
   Future<MatchDraft?> loadDraft({required String matchId}) async {
+    // Try local storage first (offline-first)
     try {
-      final client = getSupabaseClientOrNull();
-      if (client == null) {
-        return null;
-      }
+      final box = HiveService.getBox(HiveService.matchDraftsBox);
+      final key = _draftKey(matchId);
+      final draftMap = box.get(key);
       
-      final response = await client
-          .from('match_drafts')
-          .select('*')
-          .eq('match_id', matchId)
-          .maybeSingle();
-      
-      if (response != null) {
-        return MatchDraft.fromMap(response);
+      if (draftMap != null) {
+        _logger.i('Loaded draft from local storage: $matchId');
+        return MatchDraft.fromMap(Map<String, dynamic>.from(draftMap));
       }
     } catch (e) {
-      return null;
+      _logger.w('Failed to load draft from local storage', error: e);
     }
+    
+    // Fallback to Supabase if not found locally
+    try {
+      final client = getSupabaseClientOrNull();
+      if (client != null) {
+        final response = await client
+            .from('match_drafts')
+            .select('*')
+            .eq('match_id', matchId)
+            .maybeSingle();
+        
+        if (response != null) {
+          final draft = MatchDraft.fromMap(response);
+          // Cache it locally for future offline access
+          await saveDraft(teamId: teamId, matchId: matchId, draft: draft);
+          _logger.i('Loaded draft from Supabase and cached: $matchId');
+          return draft;
+        }
+      }
+    } catch (e) {
+      _logger.w('Failed to load draft from Supabase', error: e);
+    }
+    
     return null;
   }
 
   @override
   Future<List<MatchPlayer>> fetchRoster({required String teamId}) async {
+    // Try local storage first (offline-first)
+    try {
+      final box = HiveService.getBox(HiveService.matchPlayersBox);
+      final key = _playersKey(teamId);
+      final playersMap = box.get(key);
+      
+      if (playersMap != null && playersMap['players'] is List) {
+        final playersList = (playersMap['players'] as List)
+            .map((p) => ModelSerializer.matchPlayerFromMap(
+                Map<String, dynamic>.from(p as Map)))
+            .toList();
+        _logger.i('Loaded ${playersList.length} players from local storage');
+        return playersList;
+      }
+    } catch (e) {
+      _logger.w('Failed to load players from local storage', error: e);
+    }
+    
+    // Fallback to Supabase if not found locally
     try {
       final client = getSupabaseClientOrNull();
-      if (client == null) {
-        return [];
+      if (client != null) {
+        final response = await client
+            .from('players')
+            .select('*')
+            .eq('team_id', teamId)
+            .order('jersey_number');
+        
+        final players = (response as List).map((map) => MatchPlayer(
+          id: map['id'] as String,
+          name: '${map['first_name']} ${map['last_name']}',
+          jerseyNumber: map['jersey_number'] as int,
+          position: map['position'] as String? ?? '',
+        )).toList();
+        
+        // Cache players locally for offline access
+        if (players.isNotEmpty) {
+          final box = HiveService.getBox(HiveService.matchPlayersBox);
+          final key = _playersKey(teamId);
+          await box.put(key, {
+            'team_id': teamId,
+            'players': players.map(ModelSerializer.matchPlayerToMap).toList(),
+            'cached_at': DateTime.now().toIso8601String(),
+          });
+          _logger.i('Cached ${players.length} players from Supabase');
+        }
+        
+        return players;
       }
-      
-      final response = await client
-          .from('players')
-          .select('*')
-          .eq('team_id', teamId)
-          .order('jersey_number');
-      
-      final players = (response as List).map((map) => MatchPlayer(
-        id: map['id'] as String,
-        name: '${map['first_name']} ${map['last_name']}',
-        jerseyNumber: map['jersey_number'] as int,
-        position: map['position'] as String? ?? '',
-      )).toList();
-      
-      return players;
     } catch (e) {
-      return [];
+      _logger.w('Failed to fetch players from Supabase', error: e);
     }
+    
+    return [];
   }
 
 
@@ -196,26 +262,58 @@ class OfflineMatchSetupRepository implements MatchSetupRepository {
 
   @override
   Future<List<RosterTemplate>> loadRosterTemplates({required String teamId}) async {
+    // Try local storage first (offline-first)
+    try {
+      final box = HiveService.getBox(HiveService.rosterTemplatesBox);
+      final key = _templatesKey(teamId);
+      final templatesMap = box.get(key);
+      
+      if (templatesMap != null && templatesMap['templates'] is List) {
+        final templatesList = (templatesMap['templates'] as List)
+            .map((t) => ModelSerializer.rosterTemplateFromMap(
+                Map<String, dynamic>.from(t as Map)))
+            .toList();
+        _logger.i('Loaded ${templatesList.length} templates from local storage');
+        return templatesList;
+      }
+    } catch (e) {
+      _logger.w('Failed to load templates from local storage', error: e);
+    }
+    
+    // Fallback to Supabase if not found locally
     try {
       final client = getSupabaseClientOrNull();
-      if (client == null) {
-        return [];
+      if (client != null) {
+        final response = await client
+            .from('roster_templates')
+            .select('*')
+            .eq('team_id', teamId)
+            .order('use_count', ascending: false)
+            .order('last_used_at', ascending: false)
+            .order('name', ascending: true);
+
+        final rows = (response as List).cast<Map<String, dynamic>>();
+        final templates = rows.map((row) => RosterTemplate.fromMap(row)).toList();
+        
+        // Cache templates locally for offline access
+        if (templates.isNotEmpty) {
+          final box = HiveService.getBox(HiveService.rosterTemplatesBox);
+          final key = _templatesKey(teamId);
+          await box.put(key, {
+            'team_id': teamId,
+            'templates': templates.map(ModelSerializer.rosterTemplateToMap).toList(),
+            'cached_at': DateTime.now().toIso8601String(),
+          });
+          _logger.i('Cached ${templates.length} templates from Supabase');
+        }
+        
+        return templates;
       }
-
-      final response = await client
-          .from('roster_templates')
-          .select('*')
-          .eq('team_id', teamId)
-          .order('use_count', ascending: false)
-          .order('last_used_at', ascending: false)
-          .order('name', ascending: true);
-
-      final rows = (response as List).cast<Map<String, dynamic>>();
-      return rows.map((row) => RosterTemplate.fromMap(row)).toList();
     } catch (e) {
-      _logger.e('Failed to load roster templates', error: e);
-      return [];
+      _logger.e('Failed to load roster templates from Supabase', error: e);
     }
+    
+    return [];
   }
 
   @override
@@ -360,6 +458,94 @@ class OfflineMatchSetupRepository implements MatchSetupRepository {
       return {};
     }
   }
+  
+  @override
+  Future<void> completeMatch({
+    required String matchId,
+    required MatchCompletion completion,
+  }) async {
+    // Save completion status locally first (offline-first)
+    try {
+      final box = HiveService.getBox(HiveService.matchDraftsBox);
+      final key = _completionKey(matchId);
+      final completionMap = completion.toMap();
+      completionMap['match_id'] = matchId;
+      
+      await box.put(key, completionMap);
+      _logger.i('Saved match completion locally: $matchId');
+    } catch (e, st) {
+      _logger.e('Failed to save completion locally', error: e, stackTrace: st);
+      rethrow;
+    }
+    
+    // Try to sync to Supabase if available (best effort)
+    try {
+      final client = getSupabaseClientOrNull();
+      if (client != null) {
+        await client.from('matches').update({
+          'status': completion.status.value,
+          'completed_at': completion.completedAt.toIso8601String(),
+          'final_score_team': completion.finalScoreTeam,
+          'final_score_opponent': completion.finalScoreOpponent,
+        }).eq('id', matchId);
+        
+        _logger.i('Synced match completion to Supabase: $matchId');
+      }
+    } catch (e) {
+      // Don't fail if Supabase sync fails - we have it locally
+      _logger.w('Failed to sync completion to Supabase', error: e);
+    }
+  }
+
+  @override
+  Future<MatchCompletion?> getMatchCompletion({
+    required String matchId,
+  }) async {
+    // Try local storage first (offline-first)
+    try {
+      final box = HiveService.getBox(HiveService.matchDraftsBox);
+      final key = _completionKey(matchId);
+      final completionMap = box.get(key);
+      
+      if (completionMap != null) {
+        _logger.i('Loaded completion from local storage: $matchId');
+        return MatchCompletion.fromMap(Map<String, dynamic>.from(completionMap));
+      }
+    } catch (e) {
+      _logger.w('Failed to load completion from local storage', error: e);
+    }
+    
+    // Fallback to Supabase if not found locally
+    try {
+      final client = getSupabaseClientOrNull();
+      if (client != null) {
+        final response = await client
+            .from('matches')
+            .select('status, completed_at, final_score_team, final_score_opponent')
+            .eq('id', matchId)
+            .maybeSingle();
+        
+        if (response != null && response['status'] != null) {
+          final completion = MatchCompletion.fromMap(response);
+          // Cache it locally for future offline access
+          await completeMatch(matchId: matchId, completion: completion);
+          _logger.i('Loaded completion from Supabase and cached: $matchId');
+          return completion;
+        }
+      }
+    } catch (e) {
+      _logger.w('Failed to load completion from Supabase', error: e);
+    }
+    
+    return null;
+  }
+
+  // Helper methods for key generation
+  String _draftKey(String matchId) => 'draft_$matchId';
+  String _playersKey(String teamId) => 'players_$teamId';
+  String _templateKey(String templateId) => 'template_$templateId';
+  String _templatesKey(String teamId) => 'templates_$teamId';
+  String _completionKey(String matchId) => 'completion_$matchId';
 }
 
 MatchPlayer _decodePlayer(Map<String, dynamic> map) {
