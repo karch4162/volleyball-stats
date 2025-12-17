@@ -161,6 +161,7 @@ class _RotationPosition extends StatelessWidget {
                     IconButton(
                       icon: const Icon(Icons.close_rounded),
                       color: AppColors.textMuted,
+                      tooltip: 'Close',
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
@@ -173,6 +174,7 @@ class _RotationPosition extends StatelessWidget {
                   itemBuilder: (context, index) {
                     if (index == 0) {
                       return ListTile(
+                        key: const ValueKey('clear-player'),
                         leading: const Icon(Icons.clear_rounded),
                         title: const Text('Clear'),
                         onTap: () => Navigator.of(context).pop(null),
@@ -180,6 +182,7 @@ class _RotationPosition extends StatelessWidget {
                     }
                     final player = availablePlayers[index - 1];
                     return ListTile(
+                      key: ValueKey('rotation-player-${player.id}'),
                       leading: Container(
                         width: 40,
                         height: 40,

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/providers/supabase_client_provider.dart';
 import '../../core/theme/app_colors.dart';
@@ -94,9 +95,7 @@ class _OfflineOptionsScreenState extends State<_OfflineOptionsScreen> {
       
       if (mounted) {
         // Navigate to protected content in offline mode
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => widget.child),
-        );
+        context.go('/');
       }
     } catch (e) {
       if (mounted) {

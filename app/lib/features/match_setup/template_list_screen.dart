@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
@@ -70,19 +71,11 @@ class TemplateListScreen extends ConsumerWidget {
   }
 
   void _navigateToCreate(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const TemplateEditScreen(),
-      ),
-    );
+    context.push('/templates/create');
   }
 
   void _navigateToEdit(BuildContext context, RosterTemplate template) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => TemplateEditScreen(template: template),
-      ),
-    );
+    context.push('/templates/${template.id}/edit', extra: template);
   }
 
   Future<void> _confirmDelete(
@@ -217,8 +210,8 @@ class _TemplateCard extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.delete_outline_rounded),
               color: AppColors.textMuted,
-              onPressed: onDelete,
               tooltip: 'Delete template',
+              onPressed: onDelete,
             ),
           ],
         ),

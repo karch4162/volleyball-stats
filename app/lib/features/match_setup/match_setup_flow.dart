@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/providers/supabase_client_provider.dart';
@@ -13,8 +14,6 @@ import 'providers.dart';
 import 'models/match_draft.dart';
 import 'models/match_player.dart';
 import 'models/roster_template.dart';
-import '../rally_capture/rally_capture_screen.dart';
-import 'template_edit_screen.dart';
 import 'widgets/match_metadata_step.dart';
 import 'widgets/roster_selection_step.dart';
 import 'widgets/rotation_setup_step.dart';
@@ -471,11 +470,7 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
         draft: _draft,
       );
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => RallyCaptureScreen(matchId: _matchId),
-        ),
-      );
+      context.pushReplacement('/match/$_matchId/rally');
     } catch (error, stackTrace) {
       debugPrint('Failed to save match draft: $error\n$stackTrace');
       if (!mounted) return;
@@ -501,13 +496,12 @@ class _MatchSetupFlowState extends ConsumerState<MatchSetupFlow> {
         if (entry.value != null) entry.key: entry.value!,
     };
 
-    final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => TemplateEditScreen(
-          initialPlayerIds: _selectedPlayerIds,
-          initialRotation: rotation,
-        ),
-      ),
+    final saved = await context.push<bool>(
+      '/templates/create',
+      extra: {
+        'initialPlayerIds': _selectedPlayerIds,
+        'initialRotation': rotation,
+      },
     );
 
     if (saved == true && mounted) {
@@ -684,6 +678,7 @@ class _TemplatePickerSheet extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Icons.close_rounded),
                     color: AppColors.textMuted,
+                    tooltip: 'Close',
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -696,6 +691,7 @@ class _TemplatePickerSheet extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final template = templates[index];
                   return ListTile(
+                    key: ValueKey('flow-template-${template.id}'),
                     leading: Container(
                       width: 40,
                       height: 40,

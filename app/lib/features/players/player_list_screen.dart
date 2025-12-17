@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../core/errors/error_view.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../core/widgets/connection_guard.dart';
@@ -82,13 +84,7 @@ class PlayerListScreen extends ConsumerWidget {
             IconButton(
               icon: const Icon(Icons.add),
               tooltip: 'Add Player',
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const PlayerCreateScreen(),
-                  ),
-                );
-              },
+              onPressed: () => context.push('/players/create'),
             ),
           ],
         ),
@@ -130,13 +126,7 @@ class PlayerListScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 24),
                           ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const PlayerCreateScreen(),
-                                ),
-                              );
-                            },
+                            onPressed: () => context.push('/players/create'),
                             icon: const Icon(Icons.add),
                             label: const Text('Add Player'),
                           ),
@@ -153,17 +143,12 @@ class PlayerListScreen extends ConsumerWidget {
                 itemBuilder: (context, index) {
                   final player = players[index];
                   return Padding(
+                    key: ValueKey('player-${player.id}'),
                     padding: const EdgeInsets.only(bottom: 12),
                     child: GlassContainer(
                       padding: const EdgeInsets.all(16),
                       child: InkWell(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => PlayerEditScreen(player: player),
-                            ),
-                          );
-                        },
+                        onTap: () => context.push('/players/${player.id}/edit', extra: player),
                         child: Row(
                           children: [
                             Container(
@@ -223,49 +208,10 @@ class PlayerListScreen extends ConsumerWidget {
             loading: () => const Center(
               child: CircularProgressIndicator(),
             ),
-            error: (error, stack) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: GlassContainer(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Colors.red,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Error Loading Players',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          error.toString(),
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: () {
-                            ref.invalidate(teamPlayersProvider(selectedTeam.id));
-                          },
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
+            error: (error, stack) => ErrorView(
+              error: error,
+              onRetry: () => ref.invalidate(teamPlayersProvider(selectedTeam.id)),
+            ),
           ),
         ),
       ),

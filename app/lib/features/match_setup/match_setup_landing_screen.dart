@@ -1,21 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/cache_status_indicator.dart';
 import '../../core/widgets/glass_container.dart';
-import '../history/match_history_screen.dart';
-import '../history/season_dashboard_screen.dart';
-import '../players/player_list_screen.dart';
 import '../teams/team_providers.dart';
-import '../teams/team_list_screen.dart';
 import '../teams/models/team.dart';
-import 'match_setup_flow.dart';
 import 'models/match_draft.dart';
 import 'models/roster_template.dart';
 import 'providers.dart';
-import 'template_list_screen.dart';
 import 'constants.dart';
 
 class MatchSetupLandingScreen extends ConsumerStatefulWidget {
@@ -178,25 +173,13 @@ class _MatchSetupLandingScreenState extends ConsumerState<MatchSetupLandingScree
             onSelected: (value) {
               switch (value) {
                 case 'teams':
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const TeamListScreen(),
-                    ),
-                  );
+                  context.push('/teams');
                   break;
                 case 'players':
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const PlayerListScreen(),
-                    ),
-                  );
+                  context.push('/players');
                   break;
                 case 'templates':
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const TemplateListScreen(),
-                    ),
-                  );
+                  context.push('/templates');
                   break;
               }
             },
@@ -377,11 +360,7 @@ class _MatchSetupLandingScreenState extends ConsumerState<MatchSetupLandingScree
               icon: Icons.history_rounded,
               title: 'Match History',
               subtitle: 'View past matches and statistics',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const MatchHistoryScreen(),
-                ),
-              ),
+              onTap: () => context.push('/history'),
             ),
 
             // Season Dashboard Option
@@ -391,11 +370,7 @@ class _MatchSetupLandingScreenState extends ConsumerState<MatchSetupLandingScree
                 icon: Icons.analytics_rounded,
                 title: 'Season Dashboard',
                 subtitle: 'View season statistics and trends',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const SeasonDashboardScreen(),
-                  ),
-                ),
+                onTap: () => context.push('/season'),
               ),
             ),
 
@@ -494,13 +469,12 @@ class _MatchSetupLandingScreenState extends ConsumerState<MatchSetupLandingScree
     MatchDraft? lastDraft,
     RosterTemplate? template,
   }) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => MatchSetupFlow(
-          lastDraft: lastDraft,
-          template: template,
-        ),
-      ),
+    context.push(
+      '/match/setup',
+      extra: {
+        'lastDraft': lastDraft,
+        'fromTemplate': template,
+      },
     );
   }
 
@@ -535,6 +509,7 @@ class _MatchSetupLandingScreenState extends ConsumerState<MatchSetupLandingScree
                     IconButton(
                       icon: const Icon(Icons.close_rounded),
                       color: AppColors.textMuted,
+                      tooltip: 'Close',
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
@@ -547,6 +522,7 @@ class _MatchSetupLandingScreenState extends ConsumerState<MatchSetupLandingScree
                   itemBuilder: (context, index) {
                     final template = templates[index];
                     return ListTile(
+                      key: ValueKey('template-${template.id}'),
                       leading: Container(
                         width: 40,
                         height: 40,
@@ -804,6 +780,7 @@ class _TeamSelectorHeader extends StatelessWidget {
                     IconButton(
                       icon: const Icon(Icons.close_rounded),
                       color: AppColors.textMuted,
+                      tooltip: 'Close',
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
@@ -818,6 +795,7 @@ class _TeamSelectorHeader extends StatelessWidget {
                     final isSelected = team.id == selectedTeam?.id;
 
                     return ListTile(
+                      key: ValueKey('team-select-${team.id}'),
                       leading: Container(
                         width: 40,
                         height: 40,

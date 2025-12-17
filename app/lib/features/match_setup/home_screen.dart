@@ -1,13 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../core/errors/error_view.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/logger.dart';
 import '../../core/widgets/glass_container.dart';
 import '../auth/auth_provider.dart';
 import '../auth/auth_service.dart';
-import '../teams/team_create_screen.dart';
 import '../teams/team_providers.dart';
 import '../teams/team_selection_screen.dart';
 import 'match_setup_landing_screen.dart';
@@ -75,46 +76,9 @@ class HomeScreen extends ConsumerWidget {
               decoration: const BoxDecoration(
                 color: AppColors.background,
               ),
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: GlassContainer(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Colors.red,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Error Loading Teams',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          error.toString(),
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: () {
-                            ref.invalidate(coachTeamsProvider);
-                          },
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              child: ErrorView(
+                error: error,
+                onRetry: () => ref.invalidate(coachTeamsProvider),
               ),
             ),
           );
@@ -205,13 +169,7 @@ class HomeScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 24),
                           ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const TeamCreateScreen(),
-                                ),
-                              );
-                            },
+                            onPressed: () => context.push('/teams/create'),
                             icon: const Icon(Icons.add),
                             label: const Text('Create Team'),
                           ),
@@ -260,46 +218,9 @@ class HomeScreen extends ConsumerWidget {
               decoration: const BoxDecoration(
                 color: AppColors.background,
               ),
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: GlassContainer(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Colors.red,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Error Loading Teams',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          error.toString(),
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: () {
-                            ref.invalidate(coachTeamsProvider);
-                          },
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              child: ErrorView(
+                error: error,
+                onRetry: () => ref.invalidate(coachTeamsProvider),
               ),
             ),
           );

@@ -89,13 +89,13 @@ class PlayerStatsControls extends StatelessWidget {
           if (onAscendingChanged != null) ...[
             const SizedBox(width: 8),
             IconButton(
+              tooltip: ascending ? 'Sort descending' : 'Sort ascending',
               icon: Icon(
                 ascending ? Icons.arrow_upward : Icons.arrow_downward,
                 size: 20,
               ),
               color: AppColors.indigo,
               onPressed: () => onAscendingChanged?.call(!ascending),
-              tooltip: ascending ? 'Ascending' : 'Descending',
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             ),

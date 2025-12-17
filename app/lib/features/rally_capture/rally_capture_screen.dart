@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
 import 'providers.dart';
 import 'models/rally_models.dart';
-import '../history/set_dashboard_screen.dart';
-import '../match_setup/match_setup_flow.dart';
 import '../match_setup/models/match_player.dart';
 import '../match_setup/models/match_status.dart';
 import '../match_setup/providers.dart';
-import '../export/export_screen.dart';
 import '../teams/team_providers.dart';
 
 class RallyCaptureScreen extends ConsumerWidget {
@@ -33,20 +31,12 @@ class RallyCaptureScreen extends ConsumerWidget {
           _CustomAppBar(
             matchId: matchId,
             onEdit: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => MatchSetupFlow(matchId: matchId),
-                ),
-              );
+              await context.push('/match/$matchId/setup');
               if (!context.mounted) return;
               ref.invalidate(rallyCaptureStateProvider(matchId));
             },
             onExport: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const ExportScreen(),
-                ),
-              );
+              await context.push('/export');
             },
             onPlayerStats: () async {
               await _showPlayerStatsDialog(context, ref, matchId);
@@ -59,14 +49,7 @@ class RallyCaptureScreen extends ConsumerWidget {
             },
             onSetDashboard: () {
               final session = ref.read(rallyCaptureSessionProvider(matchId));
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => SetDashboardScreen(
-                    matchId: matchId,
-                    setNumber: session.currentSetNumber,
-                  ),
-                ),
-              );
+              context.push('/match/$matchId/set/${session.currentSetNumber}/dashboard');
             },
           ),
           Expanded(
@@ -105,6 +88,7 @@ class RallyCaptureScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final stats = playerStats[index];
               return Card(
+                key: ValueKey('player-stats-${stats.player.id}'),
                 margin: const EdgeInsets.only(bottom: 8),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
@@ -213,7 +197,7 @@ class RallyCaptureScreen extends ConsumerWidget {
                     ),
                   );
                   // Navigate back to home/match list
-                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  if (context.mounted) context.go('/');
                 }
               } catch (e) {
                 if (context.mounted) {
@@ -371,6 +355,7 @@ class _CustomAppBar extends ConsumerWidget {
               icon: const Icon(Icons.edit_rounded, size: 20),
               color: AppColors.textTertiary,
               onPressed: onEdit,
+              tooltip: 'Edit match details',
               style: IconButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 hoverColor: AppColors.hoverOverlay,
@@ -383,6 +368,7 @@ class _CustomAppBar extends ConsumerWidget {
               icon: const Icon(Icons.people_rounded, size: 20),
               color: AppColors.textTertiary,
               onPressed: onPlayerStats,
+              tooltip: 'View player statistics',
               style: IconButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 hoverColor: AppColors.hoverOverlay,

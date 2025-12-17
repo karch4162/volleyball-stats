@@ -149,6 +149,7 @@ class _TeamSelectionScreenState extends ConsumerState<TeamSelectionScreen> {
                 final isSelected = team.id == selectedTeamId;
 
                 return Padding(
+                  key: ValueKey('team-selection-${team.id}'),
                   padding: const EdgeInsets.only(bottom: 12),
                   child: GlassContainer(
                     padding: const EdgeInsets.all(16),

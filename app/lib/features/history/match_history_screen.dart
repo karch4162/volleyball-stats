@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/errors/error_view.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
 import '../teams/team_providers.dart';
@@ -43,6 +45,7 @@ class _MatchHistoryScreenState extends ConsumerState<MatchHistoryScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list_rounded),
+            tooltip: 'Filter matches',
             onPressed: () => _showFilters(context),
           ),
         ],
@@ -65,6 +68,7 @@ class _MatchHistoryScreenState extends ConsumerState<MatchHistoryScreen> {
                   suffixIcon: _searchQuery != null && _searchQuery!.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear_rounded, color: AppColors.textMuted),
+                          tooltip: 'Clear search',
                           onPressed: () {
                             setState(() {
                               _searchQuery = null;
@@ -165,6 +169,7 @@ class _MatchHistoryScreenState extends ConsumerState<MatchHistoryScreen> {
                   itemBuilder: (context, index) {
                     final match = matches[index];
                     return Padding(
+                      key: ValueKey('match-${match.matchId}'),
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _MatchCard(match: match),
                     );
@@ -245,6 +250,7 @@ class _MatchHistoryScreenState extends ConsumerState<MatchHistoryScreen> {
                     IconButton(
                       icon: const Icon(Icons.close_rounded),
                       color: AppColors.textMuted,
+                      tooltip: 'Close',
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
@@ -333,13 +339,7 @@ class _MatchCard extends StatelessWidget {
     return GlassLightContainer(
       padding: const EdgeInsets.all(16),
       borderRadius: BorderRadius.circular(16),
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => MatchRecapScreen(matchId: match.matchId),
-          ),
-        );
-      },
+      onTap: () => context.push('/match/${match.matchId}/recap'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

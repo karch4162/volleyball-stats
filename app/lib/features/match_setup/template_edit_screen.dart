@@ -166,6 +166,7 @@ class _TemplateEditScreenState extends ConsumerState<TemplateEditScreen> {
                 children: roster.map((player) {
                   final isSelected = _selectedPlayerIds.contains(player.id);
                   return FilterChip(
+                    key: ValueKey('roster-chip-${player.id}'),
                     label: Text('#${player.jerseyNumber} ${player.name}'),
                     selected: isSelected,
                     onSelected: (selected) {

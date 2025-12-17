@@ -5,12 +5,12 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/cache/offline_cache_service.dart';
 import 'core/persistence/hive_service.dart';
+import 'core/router/app_router.dart';
 import 'core/supabase.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/auth_guard.dart';
 import 'features/match_setup/data/match_draft_cache.dart';
-import 'features/match_setup/home_screen.dart';
 import 'features/match_setup/providers.dart';
 
 Future<void> main() async {
@@ -228,13 +228,11 @@ class VolleyballStatsApp extends StatelessWidget {
       );
     };
 
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Volleyball Stats',
       theme: AppTheme.darkTheme,
       debugShowCheckedModeBanner: false,
-      home: const AuthGuard(
-        child: HomeScreen(),
-      ),
+      routerConfig: appRouter,
     );
   }
 }

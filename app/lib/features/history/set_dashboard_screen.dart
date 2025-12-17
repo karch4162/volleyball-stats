@@ -181,6 +181,7 @@ class _SetDashboardScreenState extends ConsumerState<SetDashboardScreen> {
                     final index = entry.key;
                     final player = entry.value;
                     return Padding(
+                      key: ValueKey('player-perf-${player.playerId}'),
                       padding: const EdgeInsets.only(bottom: 12),
                       child: PlayerPerformanceCardV2(
                         performance: player,

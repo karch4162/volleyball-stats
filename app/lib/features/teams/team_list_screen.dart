@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
 import '../auth/auth_provider.dart';
 import '../auth/auth_service.dart';
-import 'team_create_screen.dart';
-import 'team_edit_screen.dart';
 import 'team_providers.dart';
 
 class TeamListScreen extends ConsumerWidget {
@@ -24,13 +23,7 @@ class TeamListScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Create Team',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const TeamCreateScreen(),
-                ),
-              );
-            },
+            onPressed: () => context.push('/teams/create'),
           ),
           if (currentUser != null)
             PopupMenuButton<String>(
@@ -92,13 +85,7 @@ class TeamListScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const TeamCreateScreen(),
-                              ),
-                            );
-                          },
+                          onPressed: () => context.push('/teams/create'),
                           icon: const Icon(Icons.add),
                           label: const Text('Create Team'),
                         ),
@@ -115,17 +102,12 @@ class TeamListScreen extends ConsumerWidget {
               itemBuilder: (context, index) {
                 final team = teams[index];
                 return Padding(
+                  key: ValueKey('team-${team.id}'),
                   padding: const EdgeInsets.only(bottom: 12),
                   child: GlassContainer(
                     padding: const EdgeInsets.all(16),
                     child: InkWell(
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => TeamEditScreen(team: team),
-                          ),
-                        );
-                      },
+                      onTap: () => context.push('/teams/${team.id}/edit', extra: team),
                       child: Row(
                         children: [
                           Container(

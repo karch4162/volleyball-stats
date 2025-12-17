@@ -39,6 +39,7 @@ class _MatchRecapScreenState extends ConsumerState<MatchRecapScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.download_rounded),
+            tooltip: 'Export match data',
             onPressed: () => _exportMatch(context, ref),
           ),
         ],
