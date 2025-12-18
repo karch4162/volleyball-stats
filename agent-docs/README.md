@@ -1,6 +1,6 @@
 # Agent Documentation Index
 
-**Last Updated:** December 16, 2025
+**Last Updated:** December 17, 2025
 
 ## Quick Navigation
 
@@ -46,14 +46,16 @@
 | **Rally Capture** | ✅ Complete (Phase 2) | [View](features/rally-capture/) |
 | **Match Setup** | ✅ Complete (Phases 1-6) | [View](features/match-setup/) |
 | **Dashboard** | ✅ Refactored | [View](features/dashboard/) |
-| **Offline Sync** | 🔄 Planned | [View](features/offline-sync/) |
+| **Offline Sync** | ✅ Complete (Phase 1.1) | [View](features/offline-sync/) |
+| **Authentication** | ✅ Complete (Phase 1.4) | [View](features/auth/) |
 
 ### Feature Details
 
 - **[Rally Capture](features/rally-capture/)** - Scoreboard-first UI with quick-tap player actions, running totals, and comprehensive stat tracking
 - **[Match Setup](features/match-setup/)** - Match configuration wizard with team selection, roster management, and templates
 - **[Dashboard](features/dashboard/)** - Set, match, and season statistics views with player performance breakdowns
-- **[Offline Sync](features/offline-sync/)** - Future implementation of local-first data persistence
+- **[Offline Sync](features/offline-sync/)** - Local-first data persistence with Hive, background sync, and conflict resolution
+- **[Authentication](features/auth/)** - Offline-first auth with optional cloud sync, email verification, and cached credentials
 
 ---
 
@@ -63,8 +65,12 @@
 - **[Current Status](reports/status.md)** - Project status and next steps
 - **[Recent Changes](reports/recent-changes.md)** - Latest updates and modifications
 - **[QA Remediation Plan](reports/qa-remediation-plan.md)** - Comprehensive QA evaluation and fix roadmap
+- **[Accessibility Checklist](reports/accessibility-checklist.md)** - Manual accessibility testing guide for QA
 
 ### Implementation Summaries
+- **[Phase 1 Summary](reports/phase-summaries/phase-1-summary.md)** - Critical fixes: offline persistence, rotation tracking, match completion, offline auth
+- **[Phase 3 Summary](reports/phase-summaries/phase-3-summary.md)** - Test coverage implementation: 60+ new tests for Phase 1 features
+- **[Phase 4 Summary](reports/phase-summaries/phase-4-summary.md)** - Best practices: list keys, accessibility, error boundaries, performance
 - **[Phase 7-9 Summary](reports/phase-summaries/phase-7-9-summary.md)** - Implementation summary for phases 7-9
 
 ---
@@ -94,6 +100,9 @@ Historical planning and reference documents:
 - **[Development Plan](archive/development-plan.md)** - Original 6-phase development plan
 - **[Simplified Development Plan](archive/simplified-dev-plan.md)** - Revised simplified approach
 - **[Volleyball Stats Plan](archive/volleyball-stats-plan.md)** - Initial project concept
+- **[Flutter Match Setup Plan](archive/flutter-match-setup-plan.md)** - Original Phase 1 match setup planning document
+- **[RLS Policy Plan](archive/rls-policy-plan.md)** - Supabase row-level security policy planning
+- **[Schema Notes](archive/schema-notes.md)** - Database schema design notes and rationale
 
 ---
 

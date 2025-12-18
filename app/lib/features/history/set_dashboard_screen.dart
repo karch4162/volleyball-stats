@@ -26,6 +26,12 @@ class SetDashboardScreen extends ConsumerStatefulWidget {
 class _SetDashboardScreenState extends ConsumerState<SetDashboardScreen> {
   String _sortBy = 'efficiency'; // Default sort by efficiency as requested
   bool _ascending = false; // Descending by default (highest first)
+  
+  // Cache for sorted players to avoid recomputing on every build
+  List<PlayerPerformance>? _cachedSortedPlayers;
+  String? _cachedSortBy;
+  bool? _cachedAscending;
+  List<PlayerPerformance>? _cachedInputPlayers;
 
   @override
   Widget build(BuildContext context) {
@@ -174,7 +180,7 @@ class _SetDashboardScreenState extends ConsumerState<SetDashboardScreen> {
                   );
                 }
                 
-                final sortedPlayers = _sortPlayers(players, _sortBy);
+                final sortedPlayers = _getSortedPlayers(players);
                 
                 return Column(
                   children: sortedPlayers.asMap().entries.map((entry) {
@@ -237,6 +243,39 @@ class _SetDashboardScreenState extends ConsumerState<SetDashboardScreen> {
     );
   }
 
+  /// Gets sorted players with caching to avoid recomputation
+  List<PlayerPerformance> _getSortedPlayers(List<PlayerPerformance> players) {
+    // Check if we can use cached result
+    if (_cachedSortedPlayers != null &&
+        _cachedSortBy == _sortBy &&
+        _cachedAscending == _ascending &&
+        _cachedInputPlayers != null &&
+        _listsEqual(_cachedInputPlayers!, players)) {
+      return _cachedSortedPlayers!;
+    }
+
+    // Compute new sorted list
+    final sorted = _sortPlayers(players, _sortBy);
+
+    // Cache the result
+    _cachedSortedPlayers = sorted;
+    _cachedSortBy = _sortBy;
+    _cachedAscending = _ascending;
+    _cachedInputPlayers = players;
+
+    return sorted;
+  }
+
+  /// Helper to check if two lists are equal
+  bool _listsEqual(List<PlayerPerformance> a, List<PlayerPerformance> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  /// Sorts players by the given criteria
   List<PlayerPerformance> _sortPlayers(List<PlayerPerformance> players, String sortBy) {
     final sorted = List<PlayerPerformance>.from(players);
     

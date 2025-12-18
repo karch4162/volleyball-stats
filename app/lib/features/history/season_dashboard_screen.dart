@@ -22,6 +22,10 @@ class _SeasonDashboardScreenState extends ConsumerState<SeasonDashboardScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
   String? _selectedSeason;
+  
+  // Cache for expensive sorting operations
+  List<PlayerPerformance>? _cachedPlayerPerformances;
+  Map<String, List<PlayerPerformance>>? _cachedSortedLists;
 
   @override
   Widget build(BuildContext context) {
@@ -66,15 +70,12 @@ class _SeasonDashboardScreenState extends ConsumerState<SeasonDashboardScreen> {
                   .whereType<PlayerPerformance>()
                   .toList();
 
-              // Sort by different categories
-              final topKills = List<PlayerPerformance>.from(playerPerformances)
-                ..sort((a, b) => b.kills.compareTo(a.kills));
-              final topEfficiency = List<PlayerPerformance>.from(playerPerformances)
-                ..sort((a, b) => b.attackEfficiency.compareTo(a.attackEfficiency));
-              final topBlocks = List<PlayerPerformance>.from(playerPerformances)
-                ..sort((a, b) => b.blocks.compareTo(a.blocks));
-              final topAces = List<PlayerPerformance>.from(playerPerformances)
-                ..sort((a, b) => b.aces.compareTo(a.aces));
+              // Sort by different categories (memoized)
+              final sortedLists = _getSortedPlayerLists(playerPerformances);
+              final topKills = sortedLists['kills']!;
+              final topEfficiency = sortedLists['efficiency']!;
+              final topBlocks = sortedLists['blocks']!;
+              final topAces = sortedLists['aces']!;
 
               return SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -257,6 +258,45 @@ class _SeasonDashboardScreenState extends ConsumerState<SeasonDashboardScreen> {
         ),
       ),
     );
+  }
+
+  /// Memoized sorting to avoid recomputing on every build
+  Map<String, List<PlayerPerformance>> _getSortedPlayerLists(
+    List<PlayerPerformance> players,
+  ) {
+    // Check if we can use cached result
+    if (_cachedSortedLists != null &&
+        _cachedPlayerPerformances != null &&
+        _listsEqual(_cachedPlayerPerformances!, players)) {
+      return _cachedSortedLists!;
+    }
+
+    // Compute sorted lists
+    final sorted = {
+      'kills': List<PlayerPerformance>.from(players)
+        ..sort((a, b) => b.kills.compareTo(a.kills)),
+      'efficiency': List<PlayerPerformance>.from(players)
+        ..sort((a, b) => b.attackEfficiency.compareTo(a.attackEfficiency)),
+      'blocks': List<PlayerPerformance>.from(players)
+        ..sort((a, b) => b.blocks.compareTo(a.blocks)),
+      'aces': List<PlayerPerformance>.from(players)
+        ..sort((a, b) => b.aces.compareTo(a.aces)),
+    };
+
+    // Cache the results
+    _cachedPlayerPerformances = players;
+    _cachedSortedLists = sorted;
+
+    return sorted;
+  }
+
+  /// Helper to check if two lists are equal
+  bool _listsEqual(List<PlayerPerformance> a, List<PlayerPerformance> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
 }
 
