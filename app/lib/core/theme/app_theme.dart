@@ -135,7 +135,7 @@ class AppTheme {
       ),
       
       // Card theme
-      cardTheme: const CardTheme(
+      cardTheme: const CardThemeData(
         color: AppColors.glassLight,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -213,7 +213,7 @@ class AppTheme {
       ),
       
       // Dialog theme
-      dialogTheme: const DialogTheme(
+      dialogTheme: const DialogThemeData(
         backgroundColor: AppColors.glass,
         elevation: 0,
         shape: RoundedRectangleBorder(
