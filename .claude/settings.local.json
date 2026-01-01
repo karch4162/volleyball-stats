@@ -2,7 +2,19 @@
   "permissions": {
     "allow": [
       "Bash(flutter pub get:*)",
-      "Bash(flutter analyze:*)"
+      "Bash(flutter analyze:*)",
+      "Bash(wc:*)",
+      "Bash(find:*)",
+      "Bash(bd list:*)",
+      "Bash(bd stats:*)",
+      "Bash(bd epic create:*)",
+      "Bash(bd create --help:*)",
+      "Bash(bd create \"Phase 11: History Dashboards & Match Analytics\" --type=epic --priority=1 --description=\"$\\(cat <<''EOF''\nBuild history dashboards and match analytics to help coaches review past matches, analyze performance trends, and make data-driven decisions.\n\n## Goals\n1. Match History View - Display list of completed matches with key stats\n2. Match Recap Screen - Detailed breakdown of single match with set-by-set analysis\n3. Set Dashboard - Live and historical set statistics with visual summaries\n4. Season Dashboard - Aggregate statistics across multiple matches with filters\n5. Basic Analytics - Key performance indicators \\(KPIs\\) and trends\n\n## Success Criteria\n- Coaches can view all completed matches\n- Match recap shows comprehensive statistics\n- Season dashboard displays aggregate statistics\n- Filters work correctly \\(date range, opponent\\)\n- Analytics calculations are accurate\n- Performance <2s load time for match list\n- Works offline \\(cached match summaries\\)\n\n## Dependencies\n- Assumes matches are being saved to Supabase after completion\n- May need to enhance rally capture for proper match completion\n- RLS policies must allow coaches to view their own match data\n\n## Reference\nSee agent-docs/active/todos/phase-11-plan.md for full specification\nEOF\n\\)\" --silent)",
+      "Bash(bd create:*)",
+      "Bash(bd dep add:*)",
+      "Bash(bd ready:*)",
+      "Bash(bd:*)",
+      "Bash(git push)"
     ]
   }
 }
