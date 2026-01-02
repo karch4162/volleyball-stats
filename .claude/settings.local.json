@@ -16,7 +16,12 @@
       "Bash(bd:*)",
       "Bash(git push)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(flutter test:*)",
+      "Bash(echo:*)",
+      "Bash(flutter devices:*)",
+      "Bash(flutter emulators:*)",
+      "Bash(dart analyze:*)"
     ]
   }
 }
