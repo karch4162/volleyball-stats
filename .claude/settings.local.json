@@ -14,7 +14,9 @@
       "Bash(bd dep add:*)",
       "Bash(bd ready:*)",
       "Bash(bd:*)",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
