@@ -1,6 +1,0 @@
-# Beads Configuration File
-# Pre-configured before bd init to ensure correct sync-branch setup
-
-# Git branch for beads commits (bd sync will commit to this branch)
-# IMPORTANT: Set this BEFORE running bd init to avoid using main branch
-sync-branch: "beads-sync"
