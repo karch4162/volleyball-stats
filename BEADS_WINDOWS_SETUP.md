@@ -1,14 +1,57 @@
 # Beads Setup Guide for Windows
 
+## ⚠️ CRITICAL: The sync-branch Configuration Trap
+
+**ROOT CAUSE:** When you run `bd init`, it imports the database configuration from git history. If beads was previously configured with `sync.branch = main`, that setting gets imported even after you delete `.beads` locally!
+
+**THE FIX:** You MUST commit and push the removal of `.beads` from git before reinitializing, otherwise `bd init` will import the old (wrong) sync-branch configuration.
+
 ## The Problem
 
-On Windows, the beads installation doesn't automatically create the `.beads` directory correctly, which can cause beads to fail or create a local `.beads` directory instead of using the proper git worktree structure.
+On Windows (and all platforms), the beads installation workflow has a critical issue: if you don't configure `sync-branch` correctly BEFORE the first `bd init`, it defaults to using `main` branch, which pollutes your main branch with beads sync commits.
 
 ## The Solution
 
-**Important:** `.beads` should be a **regular directory**, not a symlink! This is the correct setup that matches how beads works on all platforms.
+**Important:** 
+1. `.beads` should be a **regular directory**, not a symlink!
+2. **Configure `sync-branch` BEFORE first `bd init`** or you'll be stuck with `main`
+3. If fixing an existing setup, you must **commit and push** the removal before reinitializing
 
-## Step-by-Step Fix
+## Fresh Project Setup (CORRECT WAY)
+
+If you're setting up beads for the FIRST TIME on a project, follow this exact sequence:
+
+```bash
+# 1. Create .beads directory with config FIRST
+mkdir .beads
+
+# 2. Create config.yaml with sync-branch configured
+cat > .beads/config.yaml << 'EOF'
+# Beads Configuration File
+sync-branch: "beads-sync"
+EOF
+
+# 3. Commit this config to git FIRST
+git add .beads/config.yaml
+git commit -m "feat(beads): configure sync-branch before init"
+git push
+
+# 4. NOW run bd init (it will use beads-sync from config)
+bd init --prefix your-project-name
+
+# 5. Import any existing issues if you have them
+# bd sync --import-only path/to/issues.jsonl
+
+# 6. Run first sync to create beads-sync branch
+bd sync
+
+# 7. Verify setup
+bd doctor
+git worktree list  # Should show beads-sync worktree
+git branch -a | grep beads  # Should show beads-sync branch
+```
+
+## Step-by-Step Fix (For Broken Setups)
 
 ### 1. Initial State Check
 
@@ -159,24 +202,45 @@ your-project/
                 └── issues.jsonl
 ```
 
+## Understanding Beads Architecture
+
+### The "External BEADS_DIR" Message
+
+When you run `bd sync`, you might see: "External BEADS_DIR detected, using direct commit..."
+
+**What this means:** Beads uses a git worktree to manage the sync branch separately from your main working directory. The "external" directory is `.git/beads-worktrees/beads-sync/`.
+
+### How Beads Sync Works
+
+```
+1. Your main working directory:
+   volleyball-stats/
+   └── .beads/
+       ├── beads.db          ← Your local database
+       └── issues.jsonl      ← Gets synced from worktree
+
+2. Git worktree (managed by beads):
+   .git/beads-worktrees/beads-sync/
+   └── .beads/
+       └── issues.jsonl      ← Source of truth on beads-sync branch
+
+3. When you run `bd sync`:
+   a. Exports database → worktree/.beads/issues.jsonl
+   b. Commits changes in worktree (on beads-sync branch)
+   c. Pulls worktree/.beads/issues.jsonl → main .beads/issues.jsonl
+```
+
+### Why This Architecture?
+
+- **Separation of concerns**: Beads metadata lives on a separate branch
+- **Clean main branch**: No beads sync commits polluting your main history
+- **Team sync**: Everyone can pull the same beads metadata from the beads-sync branch
+
 ## Fresh Project Setup (No Existing Beads)
 
-If you're setting up beads for the first time on a project:
+**DEPRECATED - See "Fresh Project Setup (CORRECT WAY)" at the top of this document instead.**
 
-```bash
-# 1. Ensure no .beads directory exists
-rm -rf .beads
-
-# 2. Create directory
-mkdir .beads
-
-# 3. Initialize beads
-bd init --prefix your-project-name
-
-# 4. Verify
-bd doctor
-bd list
-```
+This section kept for reference only. The correct way is documented above.
 
 ## Migrating from Another Machine
 
